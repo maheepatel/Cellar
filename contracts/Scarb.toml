@@ -1,0 +1,26 @@
+[package]
+name = "strongbox"
+version = "0.1.0"
+edition = "2024_07"
+description = "STRK20 anonymizer contract routing shielded balances into ERC-4626 yield vaults"
+license = "Apache-2.0"
+
+[dependencies]
+starknet = "2.20.0"
+
+[dev-dependencies]
+cairo_test = "2.20.1"
+
+# Tests use Cairo's native test harness (`scarb cairo-test`) rather than
+# Starknet Foundry. Reason: starknet-foundry publishes no Windows binary as of
+# v0.63.0 (macOS and Linux only). The native harness gives us deploy_syscall
+# and testing::set_contract_address, which is enough to exercise the full
+# pool -> helper -> vault cycle. On macOS/Linux you may additionally run
+# snforge against the same contracts.
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+
+[scripts]
+test = "scarb cairo-test"
