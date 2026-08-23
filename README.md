@@ -60,10 +60,14 @@ Further limitations inherited from the pool: tight deposit-and-withdraw timing c
 contracts/
   src/yield_helper.cairo   the anonymizer — this is what goes to mainnet
   src/mocks.cairo          ERC-20 + ERC-4626 test doubles
-  src/tests.cairo          9 tests covering both paths and every guard
-docs/
-  ARCHITECTURE.md          the full cycle and design decisions
-scripts/                   deployment helpers
+  src/tests.cairo          11 tests covering both paths and every guard
+app/
+  src/lib/strk20.ts        Wallet API integration — actions, u256 split, shadow accounts
+  src/lib/wallet.ts        discovery, connection, mainnet guard, capability probe
+  src/app/page.tsx         Day 0 console
+config/mainnet.json        verified chain values, pinned
+docs/ARCHITECTURE.md       the full cycle and design decisions
+scripts/DEPLOY.md          starkli deployment, Sepolia then mainnet
 strk20.json                what the sprint panel reads
 ```
 
@@ -73,12 +77,22 @@ Requires [Scarb](https://docs.swmansion.com/scarb/) 2.20+ and Node 24+.
 
 ```bash
 git clone https://github.com/maheepatel/Cellar
-cd cellar/contracts
+cd Cellar/contracts
 scarb build
 scarb cairo-test
 ```
 
-Expected: `9 passed; 0 failed`.
+Expected: `11 passed; 0 failed`.
+
+The web app:
+
+```bash
+cd app
+npm install
+npm run dev
+```
+
+Then open <http://localhost:5273>. Note `starknet` must resolve to **≥10.4.0** — npm's `latest` tag is 10.0.2, which has no Wallet API at all. The dependency is pinned as `^10.4.0`, which correctly resolves to 10.7.x.
 
 ### A note on the test runner
 
@@ -106,11 +120,14 @@ It deliberately does **not** attempt the full RFP architecture. That description
 ## Status
 
 - [x] Anonymizer contract, deposit and withdraw paths
-- [x] Immutable vault allowlist
-- [x] Test suite — 9 passing
+- [x] Immutable vault allowlist, no owner
+- [x] Test suite — 11 passing, every protocol constraint covered
+- [x] Wallet API integration layer, including shadow-account derivation
+- [x] Day 0 console — wallet discovery, mainnet guard, capability probe
 - [ ] Sepolia deploy against `MockVault`
+- [ ] Three verified mainnet transactions
 - [ ] Mainnet deploy against a live Vesu market
-- [ ] Web app — shield, earn, withdraw, position view
+- [ ] Position dashboard — shield, earn, withdraw
 - [ ] Viewing-key solvency proof + public verifier page
 - [ ] Demo video
 
