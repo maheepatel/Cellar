@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background: theme("colors.ink");
+  color: #E6E9F0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.panel {
+  background: theme("colors.panel");
+  border: 1px solid theme("colors.edge");
+  border-radius: 6px;
+}
+
+.btn {
+  border-radius: 5px;
+  padding: 0.6rem 1.05rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: opacity 0.15s ease;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: theme("colors.brass");
+  color: #14161B;
+}
+.btn-ghost {
+  border: 1px solid theme("colors.edge");
+  color: #E6E9F0;
+}
+.btn:not(:disabled):hover {
+  opacity: 0.88;
+}
+:focus-visible {
+  outline: 2px solid theme("colors.brass");
+  outline-offset: 2px;
+}
