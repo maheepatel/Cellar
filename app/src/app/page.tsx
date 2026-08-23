@@ -67,7 +67,7 @@ export default function Page() {
     <main className="mx-auto max-w-3xl px-6 py-14">
       <header className="mb-10">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
-          Strongbox · Day 0
+          Cellar · Day 0
         </p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight">
           Three mainnet transactions

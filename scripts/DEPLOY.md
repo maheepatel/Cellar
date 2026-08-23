@@ -17,7 +17,7 @@ Install starkli from its GitHub releases and put it on PATH.
 Never paste a private key into a shell that logs history. Use a keystore file.
 
 ```bash
-starkli signer keystore from-key ~/.starkli/strongbox.json
+starkli signer keystore from-key ~/.starkli/cellar.json
 starkli account fetch <YOUR_ADDRESS> --output ~/.starkli/account.json --rpc https://rpc.starknet.lava.build
 ```
 
@@ -29,9 +29,9 @@ cannot tell the mock from the real thing.
 
 ```bash
 # declare
-starkli declare contracts/target/dev/strongbox_MockERC20.contract_class.json --rpc <SEPOLIA_RPC>
-starkli declare contracts/target/dev/strongbox_MockVault.contract_class.json  --rpc <SEPOLIA_RPC>
-starkli declare contracts/target/dev/strongbox_YieldHelper.contract_class.json --rpc <SEPOLIA_RPC>
+starkli declare contracts/target/dev/cellar_MockERC20.contract_class.json --rpc <SEPOLIA_RPC>
+starkli declare contracts/target/dev/cellar_MockVault.contract_class.json  --rpc <SEPOLIA_RPC>
+starkli declare contracts/target/dev/cellar_YieldHelper.contract_class.json --rpc <SEPOLIA_RPC>
 
 # deploy the mock stack
 starkli deploy <MOCK_ERC20_CLASS_HASH> --rpc <SEPOLIA_RPC>
@@ -55,7 +55,7 @@ Pick a vToken from <https://docs.vesu.xyz/developers/contract-addresses>,
 choosing a market with real liquidity and a non-zero rate.
 
 ```bash
-starkli declare contracts/target/dev/strongbox_YieldHelper.contract_class.json \
+starkli declare contracts/target/dev/cellar_YieldHelper.contract_class.json \
   --rpc https://rpc.starknet.lava.build
 
 starkli deploy <CLASS_HASH> 1 <VESU_VTOKEN_ADDRESS> \

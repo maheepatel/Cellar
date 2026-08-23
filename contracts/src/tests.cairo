@@ -166,7 +166,7 @@ fn accrued_yield_leaves_shares_over_after_a_round_trip() {
 }
 
 #[test]
-#[should_panic(expected: ('SB: vault not allowed', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CLR: vault not allowed', 'ENTRYPOINT_FAILED'))]
 fn rejects_a_vault_outside_the_allowlist() {
     let (asset, _vault, helper) = setup();
     fund(asset, helper.contract_address, ONE_TOKEN);
@@ -180,7 +180,7 @@ fn rejects_a_vault_outside_the_allowlist() {
 }
 
 #[test]
-#[should_panic(expected: ('SB: assets is zero', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CLR: assets is zero', 'ENTRYPOINT_FAILED'))]
 fn rejects_zero_assets() {
     let (asset, vault, helper) = setup();
     act_as_pool();
@@ -191,7 +191,7 @@ fn rejects_zero_assets() {
 }
 
 #[test]
-#[should_panic(expected: ('SB: in_token == out_token', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CLR: in_token == out_token', 'ENTRYPOINT_FAILED'))]
 fn rejects_identical_tokens() {
     let (asset, _vault, helper) = setup();
     act_as_pool();
@@ -206,7 +206,7 @@ fn rejects_identical_tokens() {
 }
 
 #[test]
-#[should_panic(expected: ('SB: helper underfunded', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CLR: helper underfunded', 'ENTRYPOINT_FAILED'))]
 fn rejects_when_the_pool_did_not_send_the_inputs() {
     let (asset, vault, helper) = setup();
     // deliberately unfunded
@@ -225,7 +225,7 @@ fn rejects_when_the_pool_did_not_send_the_inputs() {
 /// vault mints nothing — rounding, a paused market, a fee-on-transfer
 /// underlying — the call has to revert rather than credit an empty note.
 #[test]
-#[should_panic(expected: ('SB: zero output', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CLR: zero output', 'ENTRYPOINT_FAILED'))]
 fn rejects_a_vault_that_mints_nothing() {
     let (asset, vault, helper) = setup();
     fund(asset, helper.contract_address, ONE_TOKEN);
@@ -243,7 +243,7 @@ fn rejects_a_vault_that_mints_nothing() {
 /// Note amounts are 128-bit while vault maths is 256-bit. A delta that cannot
 /// narrow must revert loudly instead of silently truncating into a wrong note.
 #[test]
-#[should_panic(expected: ('SB: output exceeds u128', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CLR: output exceeds u128', 'ENTRYPOINT_FAILED'))]
 fn rejects_output_that_does_not_fit_a_note() {
     let (asset, vault, helper) = setup();
     // u128::MAX + 1 — one past what a note amount can hold.

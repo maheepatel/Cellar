@@ -6,7 +6,7 @@
 //
 // On this route the wallet holds the viewing key, discovers notes, generates
 // the ZK proof and submits the transaction. This app never touches a key, a
-// note, or a prover — which is why Strongbox self-hosts no privacy
+// note, or a prover — which is why Cellar self-hosts no privacy
 // infrastructure, and why none of the SDK's client-side traps (BigInt viewing
 // keys, proving against block-10, empty proofFacts) apply to us.
 //

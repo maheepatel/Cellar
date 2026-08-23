@@ -7,12 +7,12 @@
 // shows up blank.
 
   {
-    "repo_url": "https://github.com/maheepatel/strongbox",
+    "repo_url": "https://github.com/maheepatel/cellar",
     "telegram": [
       "Mahendarp9"
     ],
-    "name": "Strongbox",
-    "one_liner": "A private yield account on Starknet. Shield an asset, earn real lending yield through a custom anonymizer contract, and keep your position size, your strategy, and the link between deposit and withdrawal private.",
+    "name": "Cellar",
+    "one_liner": "A private yield account on Starknet. Shield an asset, earn real lending yield through a custom anonymizer contract, and stay unlinkable to it — visible flow, invisible participant.",
     "category": "DeFi",
     "inspired_by": "RFP-24",
     "team": [

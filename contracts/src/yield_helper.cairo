@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Strongbox — STRK20 anonymizer contract for private yield.
+// Cellar — STRK20 anonymizer contract for private yield.
 //
 // The STRK20 privacy pool calls `privacy_invoke` on this contract during an
 // InvokeExternal action. The full cycle, all inside ONE atomic transaction:
@@ -28,7 +28,7 @@
 // would publish a correlatable trace of an otherwise private action.
 //
 // Deliberately absent: an owner. The vault allowlist is written once in the
-// constructor and has no setter, so a deployed Strongbox helper is a fixed,
+// constructor and has no setter, so a deployed Cellar helper is a fixed,
 // auditable route. Nobody — including us — can redirect user funds later.
 
 use starknet::ContractAddress;
@@ -88,17 +88,17 @@ pub trait IYieldHelper<T> {
 }
 
 pub mod errors {
-    pub const ZERO_IN_TOKEN: felt252 = 'SB: in_token is zero';
-    pub const ZERO_OUT_TOKEN: felt252 = 'SB: out_token is zero';
-    pub const ZERO_ASSETS: felt252 = 'SB: assets is zero';
-    pub const TOKENS_EQUAL: felt252 = 'SB: in_token == out_token';
-    pub const VAULT_NOT_ALLOWED: felt252 = 'SB: vault not allowed';
-    pub const INSUFFICIENT_BALANCE: felt252 = 'SB: helper underfunded';
-    pub const ZERO_OUT_AMOUNT: felt252 = 'SB: zero output';
-    pub const AMOUNT_OVERFLOW: felt252 = 'SB: output exceeds u128';
-    pub const NO_VAULTS: felt252 = 'SB: no vaults given';
-    pub const ZERO_VAULT: felt252 = 'SB: vault is zero';
-    pub const INDEX_OUT_OF_RANGE: felt252 = 'SB: index out of range';
+    pub const ZERO_IN_TOKEN: felt252 = 'CLR: in_token is zero';
+    pub const ZERO_OUT_TOKEN: felt252 = 'CLR: out_token is zero';
+    pub const ZERO_ASSETS: felt252 = 'CLR: assets is zero';
+    pub const TOKENS_EQUAL: felt252 = 'CLR: in_token == out_token';
+    pub const VAULT_NOT_ALLOWED: felt252 = 'CLR: vault not allowed';
+    pub const INSUFFICIENT_BALANCE: felt252 = 'CLR: helper underfunded';
+    pub const ZERO_OUT_AMOUNT: felt252 = 'CLR: zero output';
+    pub const AMOUNT_OVERFLOW: felt252 = 'CLR: output exceeds u128';
+    pub const NO_VAULTS: felt252 = 'CLR: no vaults given';
+    pub const ZERO_VAULT: felt252 = 'CLR: vault is zero';
+    pub const INDEX_OUT_OF_RANGE: felt252 = 'CLR: index out of range';
 }
 
 #[starknet::contract]

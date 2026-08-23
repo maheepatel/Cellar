@@ -2,5 +2,5 @@
 version = 1
 
 [[package]]
-name = "strongbox"
+name = "cellar"
 version = "0.1.0"

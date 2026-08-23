@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Strongbox — a private yield account built on the STRK20 privacy pool.
+// Cellar — a private yield account built on the STRK20 privacy pool.
 //
 //   yield_helper — the anonymizer contract the pool calls. This is the
 //                  contract that goes to mainnet.

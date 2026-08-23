@@ -1,6 +1,8 @@
-# Strongbox
+# Cellar
 
-**A private yield account on Starknet.** Shield an asset into the STRK20 privacy pool, route it into a live ERC-4626 lending vault through a custom anonymizer contract, and let the yield accrue back as encrypted notes — so your position size, your strategy, and the link between your deposit and your withdrawal all stay private, while your solvency stays provable to anyone you choose.
+**A private yield account on Starknet.** Shield an asset into the STRK20 privacy pool, route it into a live ERC-4626 lending vault through a custom anonymizer contract, and let the yield accrue back as encrypted notes — so **nothing on-chain links the position to you**, and your solvency stays provable to anyone you choose.
+
+Visible flow, invisible participant. An observer sees that *someone* is earning here. Not that it is you, not what else you hold, and not where you withdraw to.
 
 Built for the [STRK20 Private Sprint](https://strk20.starknet.io/hackathon), against [RFP-24 — Private chain-abstracted yield account](https://strk20.starknet.io/rfp/private-yield-account).
 
@@ -10,11 +12,11 @@ Built for the [STRK20 Private Sprint](https://strk20.starknet.io/hackathon), aga
 
 On-chain savings expose everything. Anyone can read your complete balance sheet and DeFi allocation. When positions execute from the same wallet across protocols, observers reconstruct your strategy and front-run it. Deposit and withdrawal addresses stay permanently linked, so the entire path of your capital is a public record.
 
-Bitcoin was invented so value could move without permission or surveillance. Seventeen years later, your balance is a URL anyone can open. Strongbox is a small, concrete step at fixing that for yield-bearing positions.
+Bitcoin was invented so value could move without permission or surveillance. Seventeen years later, your balance is a URL anyone can open. Cellar is a small, concrete step at fixing that for yield-bearing positions.
 
 ## How it works
 
-Strongbox is an **anonymizer contract** — an app-specific Cairo adapter that the STRK20 privacy pool calls atomically. One private deposit is five steps inside a single transaction:
+Cellar is an **anonymizer contract** — an app-specific Cairo adapter that the STRK20 privacy pool calls atomically. One private deposit is five steps inside a single transaction:
 
 | # | Step |
 |---|---|
@@ -28,9 +30,9 @@ If any step fails, the whole transaction reverts. The helper never holds custody
 
 ## What is actually hidden
 
-**Strongbox gives you identity privacy for yield actions, not amount privacy.** This distinction is the most important thing on this page, and overclaiming it would be worse than not shipping.
+**Cellar gives you identity privacy for yield actions, not amount privacy.** This distinction is the most important thing on this page, and overclaiming it would be worse than not shipping.
 
-The STRK20 documentation states it directly: *actions routed through anonymizer contracts reveal amounts and timing — identity privacy only.* Strongbox routes through an anonymizer, so that applies to every earn and withdraw.
+The STRK20 documentation states it directly: *actions routed through anonymizer contracts reveal amounts and timing — identity privacy only.* Cellar routes through an anonymizer, so that applies to every earn and withdraw.
 
 | Hidden | Visible |
 |---|---|
@@ -40,9 +42,9 @@ The STRK20 documentation states it directly: *actions routed through anonymizer 
 | Note amounts and ownership inside the pool | Withdrawal recipient and amount |
 | Note-to-note private transfers — **both** amounts and parties | Published nullifiers, unlinkable without a viewing key |
 
-The right mental model is the one prediction markets use: **visible flow, invisible participants.** An observer watching Starknet sees that someone deposited into a Vesu market through Strongbox, and how much. They cannot tell it was you, cannot connect it to your other positions, and cannot follow it to where you eventually withdraw.
+The right mental model is the one prediction markets use: **visible flow, invisible participants.** An observer watching Starknet sees that someone deposited into a Vesu market through Cellar, and how much. They cannot tell it was you, cannot connect it to your other positions, and cannot follow it to where you eventually withdraw.
 
-Further limitations inherited from the pool: tight deposit-and-withdraw timing can correlate, distinctive round amounts are recognisable, and the pool's outer edges are public by design. Strongbox does not change any of that, and no privacy tool should claim otherwise.
+Further limitations inherited from the pool: tight deposit-and-withdraw timing can correlate, distinctive round amounts are recognisable, and the pool's outer edges are public by design. Cellar does not change any of that, and no privacy tool should claim otherwise.
 
 ## Security design
 
@@ -70,8 +72,8 @@ strk20.json                what the sprint panel reads
 Requires [Scarb](https://docs.swmansion.com/scarb/) 2.20+ and Node 24+.
 
 ```bash
-git clone https://github.com/maheepatel/strongbox
-cd strongbox/contracts
+git clone https://github.com/maheepatel/cellar
+cd cellar/contracts
 scarb build
 scarb cairo-test
 ```

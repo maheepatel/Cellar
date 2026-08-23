@@ -1,5 +1,5 @@
 [package]
-name = "strongbox"
+name = "cellar"
 version = "0.1.0"
 edition = "2024_07"
 description = "STRK20 anonymizer contract routing shielded balances into ERC-4626 yield vaults"

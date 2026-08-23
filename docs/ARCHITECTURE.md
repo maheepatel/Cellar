@@ -1,8 +1,8 @@
 # Architecture
 
-## Where Strongbox sits
+## Where Cellar sits
 
-Strongbox is not a privacy protocol. It is a small adapter that lets an existing one reach a yield venue it otherwise could not.
+Cellar is not a privacy protocol. It is a small adapter that lets an existing one reach a yield venue it otherwise could not.
 
 ```
 user's wallet  ──▶  STRK20 privacy pool  ──▶  YieldHelper  ──▶  ERC-4626 vault
@@ -34,15 +34,15 @@ Any failure reverts all five steps.
 
 ### The vault allowlist is immutable
 
-The reference implementation pins a single venue as a constructor parameter. Strongbox generalises that to a set, still written once in the constructor, still with no setter.
+The reference implementation pins a single venue as a constructor parameter. Cellar generalises that to a set, still written once in the constructor, still with no setter.
 
 This matters because `privacy_invoke` takes token addresses as arguments. Without an allowlist, malformed or malicious calldata could name an arbitrary contract as the "vault" and the helper would call it. The allowlist reduces the reachable surface to a fixed set chosen at deployment and publicly readable afterwards.
 
-The absence of a setter is equally deliberate. An owner who can add a vault later is an owner who can be compromised, coerced, or change their mind. A deployed Strongbox helper is a fixed route or it is nothing.
+The absence of a setter is equally deliberate. An owner who can add a vault later is an owner who can be compromised, coerced, or change their mind. A deployed Cellar helper is a fixed route or it is nothing.
 
 ### Output is measured, not reported
 
-ERC-4626 `deposit` returns a shares figure. Strongbox discards it and uses the balance delta instead. A vault that misreports — through a bug, a fee-on-transfer underlying, or malice — cannot cause the pool to credit a note that isn't backed by tokens actually received.
+ERC-4626 `deposit` returns a shares figure. Cellar discards it and uses the balance delta instead. A vault that misreports — through a bug, a fee-on-transfer underlying, or malice — cannot cause the pool to credit a note that isn't backed by tokens actually received.
 
 The delta is `u256` and a note amount is `u128`, so the conversion is explicit and reverts on overflow rather than truncating.
 
@@ -69,7 +69,7 @@ These come from the STRK20 anonymizer anatomy and are not negotiable:
 - Approve, never transfer.
 - Measure output by balance delta.
 - At most **one** invoke per pool transaction. Batching happens inside the helper, never across calls.
-- An empty span is legal and means "credit nothing yet" — useful for a stateful helper parking funds until a later claim. Strongbox does not currently use this.
+- An empty span is legal and means "credit nothing yet" — useful for a stateful helper parking funds until a later claim. Cellar does not currently use this.
 
 ## Client-side gotchas
 
@@ -81,4 +81,4 @@ Documented here because each costs roughly a day to rediscover:
 
 ## Not built, and why
 
-The RFP describes Enclave-based confidential routing and private sub-accounts fanning capital into unlinkable execution identities. Neither has shipped on Starknet. They are the correct long-term architecture and they are not buildable today, so Strongbox implements the MVP the RFP itself defines and says so plainly rather than implying capabilities it does not have.
+The RFP describes Enclave-based confidential routing and private sub-accounts fanning capital into unlinkable execution identities. Neither has shipped on Starknet. They are the correct long-term architecture and they are not buildable today, so Cellar implements the MVP the RFP itself defines and says so plainly rather than implying capabilities it does not have.

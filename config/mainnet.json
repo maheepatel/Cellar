@@ -7,7 +7,7 @@
   "explorer": "https://voyager.online",
 
   "_route": "wallet-api",
-  "_routeNote": "The Wallet API route needs no prover and no discovery/indexer service. The wallet holds the viewing key, discovers notes, generates the proof and submits. The dapp only requests actions. This is why Strongbox does not self-host any privacy infrastructure.",
+  "_routeNote": "The Wallet API route needs no prover and no discovery/indexer service. The wallet holds the viewing key, discovers notes, generates the proof and submits. The dapp only requests actions. This is why Cellar does not self-host any privacy infrastructure.",
 
   "_wallets": "MAINNET-DAY-0.md names Ready or Braavos; other STRK20 pages name Ready or Xverse. Ready appears in both, so Ready is the primary target. Verify the others before relying on them.",
 
