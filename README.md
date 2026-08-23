@@ -72,7 +72,7 @@ strk20.json                what the sprint panel reads
 Requires [Scarb](https://docs.swmansion.com/scarb/) 2.20+ and Node 24+.
 
 ```bash
-git clone https://github.com/maheepatel/cellar
+git clone https://github.com/maheepatel/Cellar
 cd cellar/contracts
 scarb build
 scarb cairo-test
