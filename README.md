@@ -28,17 +28,21 @@ If any step fails, the whole transaction reverts. The helper never holds custody
 
 ## What is actually hidden
 
-Being honest about this matters more than overclaiming. The pool conceals a great deal and publishes some things by design.
+**Strongbox gives you identity privacy for yield actions, not amount privacy.** This distinction is the most important thing on this page, and overclaiming it would be worse than not shipping.
+
+The STRK20 documentation states it directly: *actions routed through anonymizer contracts reveal amounts and timing — identity privacy only.* Strongbox routes through an anonymizer, so that applies to every earn and withdraw.
 
 | Hidden | Visible |
 |---|---|
-| Your total shielded balance | That the pool paid the helper, and how much |
-| Your position size in any vault | Aggregate vault TVL and yield rates |
-| Which vault you chose, and when you rebalanced | The set of vaults this helper may route into |
-| The link between your deposit and your withdrawal | Deposit and withdrawal amounts at the pool's public edge |
-| Note amounts and ownership | Published nullifiers — unlinkable without a viewing key |
+| **Who you are.** Nothing links an earn action to your wallet | The amount and timing of each earn or withdraw |
+| Your total shielded balance across all notes | Which vault was used, and that the pool paid the helper |
+| The link between your deposit and your withdrawal address | Depositor address and amount at the shield step |
+| Note amounts and ownership inside the pool | Withdrawal recipient and amount |
+| Note-to-note private transfers — **both** amounts and parties | Published nullifiers, unlinkable without a viewing key |
 
-Known limitations inherited from the pool: tight deposit-and-withdraw timing can correlate, distinctive round amounts are recognisable, and the pool's outer edges are public by design. Strongbox does not change any of that, and no privacy tool should claim otherwise.
+The right mental model is the one prediction markets use: **visible flow, invisible participants.** An observer watching Starknet sees that someone deposited into a Vesu market through Strongbox, and how much. They cannot tell it was you, cannot connect it to your other positions, and cannot follow it to where you eventually withdraw.
+
+Further limitations inherited from the pool: tight deposit-and-withdraw timing can correlate, distinctive round amounts are recognisable, and the pool's outer edges are public by design. Strongbox does not change any of that, and no privacy tool should claim otherwise.
 
 ## Security design
 

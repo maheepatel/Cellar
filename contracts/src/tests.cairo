@@ -221,6 +221,46 @@ fn rejects_when_the_pool_did_not_send_the_inputs() {
         );
 }
 
+/// The pool must never be handed a note for tokens that did not arrive. If a
+/// vault mints nothing — rounding, a paused market, a fee-on-transfer
+/// underlying — the call has to revert rather than credit an empty note.
+#[test]
+#[should_panic(expected: ('SB: zero output', 'ENTRYPOINT_FAILED'))]
+fn rejects_a_vault_that_mints_nothing() {
+    let (asset, vault, helper) = setup();
+    fund(asset, helper.contract_address, ONE_TOKEN);
+
+    // Inflate share price so far that a 1-wei deposit rounds to zero shares.
+    vault.simulate_yield_bps(100_000_000);
+
+    act_as_pool();
+    helper
+        .privacy_invoke(
+            LendingOperation::Deposit, asset.contract_address, vault.contract_address, 1, NOTE_ID,
+        );
+}
+
+/// Note amounts are 128-bit while vault maths is 256-bit. A delta that cannot
+/// narrow must revert loudly instead of silently truncating into a wrong note.
+#[test]
+#[should_panic(expected: ('SB: output exceeds u128', 'ENTRYPOINT_FAILED'))]
+fn rejects_output_that_does_not_fit_a_note() {
+    let (asset, vault, helper) = setup();
+    // u128::MAX + 1 — one past what a note amount can hold.
+    let too_big: u256 = 0x100000000000000000000000000000000;
+    fund(asset, helper.contract_address, too_big);
+
+    act_as_pool();
+    helper
+        .privacy_invoke(
+            LendingOperation::Deposit,
+            asset.contract_address,
+            vault.contract_address,
+            too_big,
+            NOTE_ID,
+        );
+}
+
 #[test]
 fn allowlist_is_publicly_verifiable() {
     let (_asset, vault, helper) = setup();
