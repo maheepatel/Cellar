@@ -32,6 +32,8 @@ pub trait IMockVault<T> {
     fn withdraw(
         ref self: T, assets: u256, receiver: ContractAddress, owner: ContractAddress,
     ) -> u256;
+    fn preview_deposit(self: @T, assets: u256) -> u256;
+    fn preview_withdraw(self: @T, assets: u256) -> u256;
     // The vault is itself the share token.
     fn balance_of(self: @T, account: ContractAddress) -> u256;
     fn allowance(self: @T, owner: ContractAddress, spender: ContractAddress) -> u256;
@@ -167,6 +169,16 @@ pub mod MockVault {
             IMockERC20Dispatcher { contract_address: self.asset.read() }
                 .transfer(receiver, assets);
             burned
+        }
+
+        /// Both directions convert at the same rate, so the quote is exact for
+        /// the mock. A real vault may round against you.
+        fn preview_deposit(self: @ContractState, assets: u256) -> u256 {
+            assets * ONE / self.rate.read()
+        }
+
+        fn preview_withdraw(self: @ContractState, assets: u256) -> u256 {
+            assets * ONE / self.rate.read()
         }
 
         fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {

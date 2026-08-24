@@ -28,9 +28,16 @@ fn pool() -> ContractAddress {
     0xF00.try_into().unwrap()
 }
 
-fn deploy(class_hash: ClassHash, calldata: Array<felt252>) -> ContractAddress {
-    let (addr, _) = deploy_syscall(class_hash, 0, calldata.span(), false).unwrap_syscall();
+/// The deployed address derives from (class hash, salt, calldata), so two
+/// instances of the same contract with identical constructor args need
+/// different salts or the second reverts with CONTRACT_ALREADY_DEPLOYED.
+fn deploy_salted(class_hash: ClassHash, calldata: Array<felt252>, salt: felt252) -> ContractAddress {
+    let (addr, _) = deploy_syscall(class_hash, salt, calldata.span(), false).unwrap_syscall();
     addr
+}
+
+fn deploy(class_hash: ClassHash, calldata: Array<felt252>) -> ContractAddress {
+    deploy_salted(class_hash, calldata, 0)
 }
 
 /// Underlying ERC-20, an ERC-4626 vault over it, and the helper with that
@@ -259,6 +266,107 @@ fn rejects_output_that_does_not_fit_a_note() {
             too_big,
             NOTE_ID,
         );
+}
+
+/// The quote the interface shows a user before they sign must be the amount
+/// they actually get credited, or the preview is worse than useless.
+#[test]
+fn preview_matches_what_a_deposit_actually_credits() {
+    let (asset, vault, helper) = setup();
+    fund(asset, helper.contract_address, ONE_TOKEN);
+
+    let quoted = helper
+        .preview(
+            LendingOperation::Deposit,
+            asset.contract_address,
+            vault.contract_address,
+            ONE_TOKEN,
+        );
+
+    act_as_pool();
+    let deposits = helper
+        .privacy_invoke(
+            LendingOperation::Deposit,
+            asset.contract_address,
+            vault.contract_address,
+            ONE_TOKEN,
+            NOTE_ID,
+        );
+
+    let credited: u256 = (*deposits.at(0)).amount.into();
+    assert(quoted == credited, 'quote must match the credit');
+}
+
+#[test]
+fn preview_reflects_accrued_yield() {
+    let (asset, vault, helper) = setup();
+
+    let before = helper
+        .preview(
+            LendingOperation::Deposit,
+            asset.contract_address,
+            vault.contract_address,
+            ONE_TOKEN,
+        );
+
+    // Shares become more valuable, so the same assets buy fewer of them.
+    vault.simulate_yield_bps(1000);
+
+    let after = helper
+        .preview(
+            LendingOperation::Deposit,
+            asset.contract_address,
+            vault.contract_address,
+            ONE_TOKEN,
+        );
+
+    assert(after < before, 'dearer shares, fewer bought');
+}
+
+#[test]
+#[should_panic(expected: ('CLR: vault not allowed', 'ENTRYPOINT_FAILED'))]
+fn preview_refuses_a_vault_outside_the_allowlist() {
+    let (asset, _vault, helper) = setup();
+    let rogue: ContractAddress = 0xBAD.try_into().unwrap();
+    helper.preview(LendingOperation::Deposit, asset.contract_address, rogue, ONE_TOKEN);
+}
+
+/// The reference implementation pins exactly one venue. Ours takes a set, so
+/// the multi-vault case needs its own coverage — every earlier test used one.
+#[test]
+fn allowlist_admits_several_vaults_and_only_those() {
+    let asset = deploy(MockERC20::TEST_CLASS_HASH, array![]);
+    let vault_a = deploy_salted(MockVault::TEST_CLASS_HASH, array![asset.into()], 'a');
+    let vault_b = deploy_salted(MockVault::TEST_CLASS_HASH, array![asset.into()], 'b');
+    let helper_addr = deploy(
+        YieldHelper::TEST_CLASS_HASH, array![2, vault_a.into(), vault_b.into()],
+    );
+    let helper = IYieldHelperDispatcher { contract_address: helper_addr };
+
+    assert(helper.allowed_vault_count() == 2, 'two vaults pinned');
+    assert(helper.is_allowed_vault(vault_a), 'vault a allowed');
+    assert(helper.is_allowed_vault(vault_b), 'vault b allowed');
+    assert(helper.allowed_vault_at(0) == vault_a, 'index 0 is vault a');
+    assert(helper.allowed_vault_at(1) == vault_b, 'index 1 is vault b');
+
+    let rogue: ContractAddress = 0xBAD.try_into().unwrap();
+    assert(!helper.is_allowed_vault(rogue), 'rogue still rejected');
+
+    // Both pinned vaults must actually be routable, not just listed.
+    let erc20 = IMockERC20Dispatcher { contract_address: asset };
+    fund(erc20, helper_addr, ONE_TOKEN * 2);
+
+    act_as_pool();
+    helper.privacy_invoke(LendingOperation::Deposit, asset, vault_a, ONE_TOKEN, NOTE_ID);
+    act_as_pool();
+    helper.privacy_invoke(LendingOperation::Deposit, asset, vault_b, ONE_TOKEN, NOTE_ID);
+}
+
+#[test]
+#[should_panic(expected: ('CLR: index out of range', 'ENTRYPOINT_FAILED'))]
+fn allowed_vault_at_rejects_a_bad_index() {
+    let (_asset, _vault, helper) = setup();
+    helper.allowed_vault_at(7);
 }
 
 #[test]

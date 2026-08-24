@@ -67,6 +67,11 @@ pub trait IVault<T> {
     fn withdraw(
         ref self: T, assets: u256, receiver: ContractAddress, owner: ContractAddress,
     ) -> u256;
+    // Read-only quotes. Part of ERC-4626 / SNIP-22, so any conforming vault has
+    // them — but a non-conforming one would revert, which is why `preview` is
+    // documented as best-effort and never gates a real deposit.
+    fn preview_deposit(self: @T, assets: u256) -> u256;
+    fn preview_withdraw(self: @T, assets: u256) -> u256;
 }
 
 #[starknet::interface]
@@ -80,6 +85,21 @@ pub trait IYieldHelper<T> {
         assets: u256,
         note_id: felt252,
     ) -> Span<OpenNoteDeposit>;
+
+    /// What a given operation would return, without executing it.
+    ///
+    /// Read-only. Lets the interface show "you will receive about X" before a
+    /// user signs, so nobody is asked to approve an amount they cannot see.
+    /// Best-effort by nature: the figure is the vault's own quote at the
+    /// current block, and the real credit is always the measured balance
+    /// delta at execution time.
+    fn preview(
+        self: @T,
+        operation: LendingOperation,
+        in_token: ContractAddress,
+        out_token: ContractAddress,
+        assets: u256,
+    ) -> u256;
 
     /// Anyone can verify which vaults this helper is permitted to route into.
     fn is_allowed_vault(self: @T, vault: ContractAddress) -> bool;
@@ -140,6 +160,22 @@ pub mod YieldHelper {
         self.vault_count.write(len);
     }
 
+    /// In an ERC-4626 round trip the vault IS the share token, so it sits on
+    /// whichever side holds shares:
+    ///   Deposit  — underlying in, shares out    => vault is out_token
+    ///   Withdraw — shares in, underlying out    => vault is in_token
+    ///
+    /// The allowlist check follows this mapping rather than a fixed argument
+    /// position, which is why it lives in one place used by both entrypoints.
+    fn vault_for(
+        operation: LendingOperation, in_token: ContractAddress, out_token: ContractAddress,
+    ) -> ContractAddress {
+        match operation {
+            LendingOperation::Deposit => out_token,
+            LendingOperation::Withdraw => in_token,
+        }
+    }
+
     #[abi(embed_v0)]
     pub impl YieldHelperImpl of IYieldHelper<ContractState> {
         fn privacy_invoke(
@@ -155,14 +191,7 @@ pub mod YieldHelper {
             assert(assets.is_non_zero(), errors::ZERO_ASSETS);
             assert(in_token != out_token, errors::TOKENS_EQUAL);
 
-            // In an ERC-4626 round trip the vault IS the share token, so the
-            // vault sits on whichever side holds shares:
-            //   Deposit  — underlying in,  shares out  => vault is out_token
-            //   Withdraw — shares in,      underlying out => vault is in_token
-            let vault_address = match operation {
-                LendingOperation::Deposit => out_token,
-                LendingOperation::Withdraw => in_token,
-            };
+            let vault_address = vault_for(operation, in_token, out_token);
             assert(self.allowed.read(vault_address), errors::VAULT_NOT_ALLOWED);
 
             let self_addr = get_contract_address();
@@ -203,6 +232,24 @@ pub mod YieldHelper {
             out_erc20.approve(pool_addr, delta);
 
             [OpenNoteDeposit { note_id, token: out_token, amount: out_amount }].span()
+        }
+
+        fn preview(
+            self: @ContractState,
+            operation: LendingOperation,
+            in_token: ContractAddress,
+            out_token: ContractAddress,
+            assets: u256,
+        ) -> u256 {
+            assert(assets.is_non_zero(), errors::ZERO_ASSETS);
+            let vault_address = vault_for(operation, in_token, out_token);
+            assert(self.allowed.read(vault_address), errors::VAULT_NOT_ALLOWED);
+
+            let vault = IVaultDispatcher { contract_address: vault_address };
+            match operation {
+                LendingOperation::Deposit => vault.preview_deposit(assets),
+                LendingOperation::Withdraw => vault.preview_withdraw(assets),
+            }
         }
 
         fn is_allowed_vault(self: @ContractState, vault: ContractAddress) -> bool {

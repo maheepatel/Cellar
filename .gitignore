@@ -19,3 +19,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local-only working notes — never committed
+_local/
