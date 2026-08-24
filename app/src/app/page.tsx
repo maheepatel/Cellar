@@ -3,65 +3,121 @@
 // Day 0 console.
 //
 // The sprint scores nothing without three verified mainnet transaction hashes
-// in strk20.json. This screen exists to produce them, and to copy them out in
-// the exact shape that file wants. It is deliberately plain — the product
-// dashboard comes later; this is the qualifying gate.
+// in strk20.json. This screen produces them, records them automatically, and
+// emits that file's exact shape.
+//
+// Deliberately plain. The product dashboard is Phase 3; this is the gate.
 
-import { useCallback, useEffect, useState } from "react";
-import { CHAIN, txUrl } from "@/lib/strk20";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CHAIN, TOKENS, txUrl } from "@/lib/strk20";
+import { fromUnits, privateTransfer, shield, toUnits, unshield } from "@/lib/actions";
 import { connect, discover, short, type Connection, type DiscoveredWallet } from "@/lib/wallet";
 
-type Step = { id: string; title: string; detail: string; hash?: string };
+type OpId = "shield" | "transfer" | "unshield";
 
-const STEPS: Step[] = [
-  {
-    id: "viewing-key",
-    title: "Register viewing key",
-    detail:
-      "One-time on-chain registration publishing your public viewing key. Uses standard signMessage — needs no STRK20 wallet support, so this one works first.",
-  },
+type Op = {
+  id: OpId;
+  title: string;
+  detail: string;
+  /** Needs a destination address. */
+  recipient?: "self" | "fresh";
+};
+
+const OPS: Op[] = [
   {
     id: "shield",
-    title: "Shield tokens",
+    title: "Shield",
     detail:
-      "Deposit an ERC-20 into the pool and receive an encrypted note. Screened by a compliance provider; depositor address and amount stay public.",
+      "Move public tokens into the pool as an encrypted note. Your address and the amount are public by design, and the deposit is screened on-chain. Privacy begins once funds are inside. This first action also registers your viewing key.",
   },
   {
     id: "transfer",
     title: "Private transfer",
     detail:
-      "A note-to-note transfer. Only encrypted notes and nullifiers are emitted — no amounts, no parties. This is the fully private one.",
+      "Note to note, inside the pool. Only encrypted notes and nullifiers are emitted — no amounts, no parties. Sending to your own address is a valid way to exercise it.",
+    recipient: "self",
+  },
+  {
+    id: "unshield",
+    title: "Unshield",
+    detail:
+      "Exit to a public address. Use a fresh one — withdrawing to the wallet that deposited re-links both ends and undoes the point of the pool.",
+    recipient: "fresh",
   },
 ];
+
+type OpState = { status: "idle" | "running" | "done" | "error"; hash?: string; error?: string };
 
 export default function Page() {
   const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
   const [conn, setConn] = useState<Connection | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [hashes, setHashes] = useState<Record<string, string>>({});
+  const [connError, setConnError] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+
+  const [symbol, setSymbol] = useState("USDC");
+  const [amount, setAmount] = useState("0.5");
+  const [recipient, setRecipient] = useState("");
+  const [state, setState] = useState<Record<OpId, OpState>>({
+    shield: { status: "idle" },
+    transfer: { status: "idle" },
+    unshield: { status: "idle" },
+  });
+
+  const token = TOKENS[symbol];
 
   useEffect(() => {
-    // Wallets inject asynchronously; one retry catches the common race where
-    // the page mounts before the extension has written to window.
+    // Wallets inject asynchronously; one retry catches the mount race.
     setWallets(discover());
     const t = setTimeout(() => setWallets(discover()), 600);
     return () => clearTimeout(t);
   }, []);
 
   const onConnect = useCallback(async (w: DiscoveredWallet) => {
-    setBusy(true);
-    setError(null);
+    setConnecting(true);
+    setConnError(null);
     try {
       setConn(await connect(w));
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
+    } catch (e) {
+      setConnError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(false);
+      setConnecting(false);
     }
   }, []);
 
-  const recorded = STEPS.filter((s) => hashes[s.id]).length;
+  const run = useCallback(
+    async (op: Op) => {
+      if (!conn || !token) return;
+      setState((s) => ({ ...s, [op.id]: { status: "running" } }));
+      try {
+        const units = toUnits(amount, token.decimals);
+        if (units === 0n) throw new Error("Amount must be greater than zero");
+
+        const to = op.recipient === "self" ? conn.address : recipient.trim();
+        if (op.recipient && !to) throw new Error("Enter a destination address");
+
+        let hash: string;
+        if (op.id === "shield") hash = await shield(conn.account, token.address, units);
+        else if (op.id === "transfer")
+          hash = await privateTransfer(conn.account, token.address, units, to);
+        else hash = await unshield(conn.account, token.address, units, to);
+
+        setState((s) => ({ ...s, [op.id]: { status: "done", hash } }));
+      } catch (e) {
+        setState((s) => ({
+          ...s,
+          [op.id]: { status: "error", error: e instanceof Error ? e.message : String(e) },
+        }));
+      }
+    },
+    [conn, token, amount, recipient],
+  );
+
+  const hashes = useMemo(
+    () => OPS.map((o) => state[o.id].hash).filter((h): h is string => Boolean(h)),
+    [state],
+  );
+
+  const canRun = Boolean(conn?.strk20 && token);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-14">
@@ -69,21 +125,19 @@ export default function Page() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
           Cellar · Day 0
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">
-          Three mainnet transactions
-        </h1>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight">Three mainnet transactions</h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
-          Nothing is scored without these. Produce them here, then paste the hashes
-          into <code className="text-brass">strk20.json</code> at the repo root.
+          Nothing is scored without these. Run them here, then commit the output
+          to <code className="text-brass">strk20.json</code> at the repo root.
         </p>
       </header>
 
-      {/* Connection */}
-      <section className="panel mb-8 p-5">
+      {/* Wallet */}
+      <section className="panel mb-6 p-5">
         <h2 className="mb-1 text-sm font-semibold">Wallet</h2>
         <p className="mb-4 text-[13px] text-muted">
-          STRK20 privacy is mainnet only. Ready is the wallet named by every official
-          source; support is checked at runtime rather than assumed.
+          STRK20 privacy is mainnet only. Support is probed at runtime rather than
+          assumed from a wallet list.
         </p>
 
         {!conn && (
@@ -97,7 +151,7 @@ export default function Page() {
               <button
                 key={w.id}
                 onClick={() => onConnect(w)}
-                disabled={busy}
+                disabled={connecting}
                 className="btn btn-ghost"
               >
                 {w.name}
@@ -119,67 +173,130 @@ export default function Page() {
             <div className="flex justify-between gap-4">
               <dt className="text-muted">STRK20 Wallet API</dt>
               <dd className={conn.strk20 ? "text-moss" : "text-rust"}>
-                {conn.strk20 ? "supported" : "NOT supported by this wallet"}
+                {conn.strk20 ? "supported" : "not supported by this wallet"}
               </dd>
             </div>
           </dl>
         )}
 
-        {error && (
+        {connError && (
           <p className="mt-4 rounded border border-rust/40 bg-rust/10 p-3 text-[13px] text-rust">
-            {error}
+            {connError}
           </p>
         )}
       </section>
 
-      {/* Steps */}
-      <section className="mb-8 space-y-3">
-        {STEPS.map((s, i) => {
-          const hash = hashes[s.id];
+      {/* Parameters */}
+      <section className="panel mb-6 p-5">
+        <h2 className="mb-4 text-sm font-semibold">Parameters</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+              Token
+            </span>
+            <select
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+            >
+              {Object.keys(TOKENS).map((s) => (
+                <option key={s} value={s}>
+                  {s} ({TOKENS[s].decimals} dp)
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+              Amount
+            </span>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              spellCheck={false}
+              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+              Unshield destination — use a fresh address
+            </span>
+            <input
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder="0x…"
+              spellCheck={false}
+              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+            />
+          </label>
+        </div>
+        {token && (
+          <p className="mt-3 font-mono text-[11px] text-muted">
+            {symbol} → {short(token.address)} · {(() => {
+              try {
+                return `${fromUnits(toUnits(amount, token.decimals), token.decimals)} ${symbol}`;
+              } catch {
+                return "invalid amount";
+              }
+            })()}
+          </p>
+        )}
+      </section>
+
+      {/* Operations */}
+      <section className="mb-6 space-y-3">
+        {OPS.map((op, i) => {
+          const st = state[op.id];
           return (
-            <article key={s.id} className="panel p-5">
+            <article key={op.id} className="panel p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-[15px] font-semibold">
                     <span className="mr-2 font-mono text-xs text-brass">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    {s.title}
+                    {op.title}
                   </h3>
                   <p className="mt-2 max-w-lg text-[13px] leading-relaxed text-muted">
-                    {s.detail}
+                    {op.detail}
                   </p>
                 </div>
                 <span
                   className={`shrink-0 rounded px-2 py-1 font-mono text-[10px] uppercase tracking-wider ${
-                    hash ? "bg-moss/15 text-moss" : "bg-edge text-muted"
+                    st.status === "done"
+                      ? "bg-moss/15 text-moss"
+                      : st.status === "error"
+                        ? "bg-rust/15 text-rust"
+                        : "bg-edge text-muted"
                   }`}
                 >
-                  {hash ? "recorded" : "pending"}
+                  {st.status === "running" ? "proving…" : st.status}
                 </span>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <input
-                  value={hash ?? ""}
-                  onChange={(e) =>
-                    setHashes((h) => ({ ...h, [s.id]: e.target.value.trim() }))
-                  }
-                  placeholder="0x… paste the transaction hash"
-                  spellCheck={false}
-                  className="min-w-0 flex-1 rounded border border-edge bg-ink px-3 py-2 font-mono text-[12px] outline-none focus:border-brass"
-                />
-                {hash && (
-                  <a
-                    href={txUrl(hash)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-ghost"
-                  >
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => run(op)}
+                  disabled={!canRun || st.status === "running"}
+                  className="btn btn-primary"
+                >
+                  {st.status === "done" ? "Run again" : `Run ${op.title.toLowerCase()}`}
+                </button>
+                {st.hash && (
+                  <a href={txUrl(st.hash)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                     Voyager ↗
                   </a>
                 )}
+                {st.hash && (
+                  <code className="font-mono text-[11px] text-muted">{short(st.hash)}</code>
+                )}
               </div>
+
+              {st.error && (
+                <p className="mt-3 rounded border border-rust/40 bg-rust/10 p-3 font-mono text-[12px] leading-relaxed text-rust">
+                  {st.error}
+                </p>
+              )}
             </article>
           );
         })}
@@ -189,16 +306,11 @@ export default function Page() {
       <section className="panel p-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">strk20.json</h2>
-          <span className="font-mono text-[11px] text-muted">{recorded} / 3</span>
+          <span className="font-mono text-[11px] text-muted">{hashes.length} / 3</span>
         </div>
         <pre className="overflow-x-auto rounded bg-ink p-4 font-mono text-[12px] leading-relaxed">
 {JSON.stringify(
-  {
-    transactions: STEPS.map((s) => hashes[s.id]).filter(Boolean),
-    contracts: [],
-    demo_video: "",
-    demo_url: "",
-  },
+  { transactions: hashes, contracts: [], demo_video: "", demo_url: "" },
   null,
   2,
 )}

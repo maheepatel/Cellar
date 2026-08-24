@@ -26,6 +26,18 @@ export const CHAIN = {
   explorer: mainnet.explorer,
 } as const;
 
+/**
+ * Mainnet token addresses, from starknet-io/starknet-addresses. Decimals
+ * matter: USDC is 6, not 18, and getting that wrong is a 10^12 error.
+ */
+export const TOKENS = mainnet.tokens as Record<
+  string,
+  { address: string; decimals: number }
+>;
+
+/** Scopes shadow accounts to this app. Max 31 ASCII chars. */
+export const DAPP_NAME = mainnet.dappName;
+
 /** Mirrors LendingOperation in contracts/src/yield_helper.cairo. */
 export enum LendingOperation {
   Deposit = 0,
@@ -76,7 +88,7 @@ export function buildYieldActions(params: {
       contract: helper,
       calldata: [`0x${operation.toString(16)}`, inToken, outToken, lo, hi, "${openNoteIds[0]}"],
     },
-  ] as unknown as STRK20_ACTION[];
+  ];
 }
 
 /**
