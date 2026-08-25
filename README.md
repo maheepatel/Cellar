@@ -129,13 +129,24 @@ It deliberately does **not** attempt the full RFP architecture. That description
 - [x] Immutable vault allowlist, no owner
 - [x] Test suite — 11 passing, every protocol constraint covered
 - [x] Wallet API integration layer, including shadow-account derivation
-- [x] Day 0 console — wallet discovery, mainnet guard, capability probe
+- [x] Day 0 console — shield, private transfer, unshield, executed in-app
+- [x] Position dashboard — earn, exit, live quote, stealth withdrawal address
 - [ ] Sepolia deploy against `MockVault`
 - [ ] Three verified mainnet transactions
-- [ ] Mainnet deploy against a live Vesu market
-- [ ] Position dashboard — shield, earn, withdraw
+- [ ] Mainnet deploy against a live ERC-4626 vault
 - [ ] Viewing-key solvency proof + public verifier page
 - [ ] Demo video
+
+### Open questions blocking Phase 2
+
+1. **Is Vesu deployed on Starknet Sepolia?** If not, the full
+   pool → helper → vault round trip cannot be rehearsed before mainnet.
+   `MockVault` is the hedge.
+2. **Where do Vesu V2 vToken addresses live?** They are not in the published
+   contract-addresses page, and the pool's `asset_config` struct has no vToken
+   field — V2 externalises them into standalone ERC-4626 vaults.
+   `app/scripts/probe-vesu.mjs` dumps any contract's ABI and struct layouts to
+   help track one down.
 
 ## License
 

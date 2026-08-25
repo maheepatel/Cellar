@@ -38,6 +38,16 @@ export const TOKENS = mainnet.tokens as Record<
 /** Scopes shadow accounts to this app. Max 31 ASCII chars. */
 export const DAPP_NAME = mainnet.dappName;
 
+/**
+ * The deployed anonymizer. Empty until Phase 2 puts it on mainnet — the UI
+ * checks for that rather than failing at call time.
+ */
+export const HELPER = mainnet.yieldHelper as {
+  classHash: string;
+  address: string;
+  allowedVaults: string[];
+};
+
 /** Mirrors LendingOperation in contracts/src/yield_helper.cairo. */
 export enum LendingOperation {
   Deposit = 0,

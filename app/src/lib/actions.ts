@@ -15,7 +15,9 @@
 // their key. That is why `shield` is the natural opener.
 
 import type { STRK20_ACTION, WalletAccountV6 } from "starknet";
-import { LendingOperation, buildYieldActions, rpc } from "./strk20";
+import { HELPER, LendingOperation, buildYieldActions, rpc, u256Parts } from "./strk20";
+
+export { shieldedBalances } from "./strk20";
 
 /** Submit a set of actions and wait for it to land. Returns the tx hash. */
 async function send(account: WalletAccountV6, actions: STRK20_ACTION[]): Promise<string> {
@@ -43,6 +45,46 @@ export function fromUnits(value: bigint, decimals: number, precision = 6): strin
   const whole = value / base;
   const frac = (value % base).toString().padStart(decimals, "0").slice(0, precision);
   return frac.replace(/0+$/, "") ? `${whole}.${frac.replace(/0+$/, "")}` : `${whole}`;
+}
+
+/**
+ * Ask the deployed helper what an operation would return, without executing.
+ *
+ * A plain read against the contract's `preview` view — no wallet, no signature,
+ * no gas. Lets the dashboard show a figure before anyone is asked to sign.
+ *
+ * Returns the vault's quote at the current block. The amount actually credited
+ * is the measured balance delta at execution, so the two can differ if the rate
+ * moves in between. Callers should present it as approximate.
+ */
+export async function previewYield(params: {
+  operation: "deposit" | "withdraw";
+  underlying: string;
+  vault: string;
+  amount: bigint;
+}): Promise<bigint> {
+  if (!HELPER.address) throw new Error("YieldHelper is not deployed yet");
+
+  const isDeposit = params.operation === "deposit";
+  // Deposit: underlying in, shares out. Withdraw: shares in, underlying out.
+  const inToken = isDeposit ? params.underlying : params.vault;
+  const outToken = isDeposit ? params.vault : params.underlying;
+  const [lo, hi] = u256Parts(params.amount);
+
+  const res = await rpc().callContract({
+    contractAddress: HELPER.address,
+    entrypoint: "preview",
+    calldata: [
+      isDeposit ? "0x0" : "0x1",
+      inToken,
+      outToken,
+      lo,
+      hi,
+    ],
+  });
+
+  // u256 comes back low limb first.
+  return BigInt(res[0]) + (BigInt(res[1]) << 128n);
 }
 
 /**
