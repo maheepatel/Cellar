@@ -60,11 +60,15 @@ Further limitations inherited from the pool: tight deposit-and-withdraw timing c
 contracts/
   src/yield_helper.cairo   the anonymizer — this is what goes to mainnet
   src/mocks.cairo          ERC-20 + ERC-4626 test doubles
-  src/tests.cairo          11 tests covering both paths and every guard
+  src/tests.cairo          16 tests covering both paths and every guard
 app/
   src/lib/strk20.ts        Wallet API integration — actions, u256 split, shadow accounts
   src/lib/wallet.ts        discovery, connection, mainnet guard, capability probe
+  src/lib/attest.ts        SNIP-12 attestations, issue + on-chain verify
   src/app/page.tsx         Day 0 console
+  src/app/vault/           position dashboard
+  src/app/prove/           issue a disclosure
+  src/app/verify/          public verifier, no wallet needed
 config/mainnet.json        verified chain values, pinned
 docs/ARCHITECTURE.md       the full cycle and design decisions
 docs/PRIVACY.md            what is hidden, what is not, and the limits
@@ -88,7 +92,13 @@ scarb build
 scarb cairo-test
 ```
 
-Expected: `11 passed; 0 failed`.
+Expected: `16 passed; 0 failed`.
+
+App-side crypto tests (SNIP-12 hashing, signature rejection, encoding round trip):
+
+```bash
+cd app && npm run test:attest
+```
 
 The web app:
 
@@ -119,7 +129,7 @@ STRK20 privacy pool (mainnet): `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69b
 
 ## Scope
 
-This implements the **MVP defined in RFP-24**: a helper contract managing shielded balances, routing to ERC-4626 lending vaults, with viewing-key disclosure.
+This implements the **MVP defined in RFP-24**: a helper contract managing shielded balances, routing to ERC-4626 lending vaults, with selective disclosure. Disclosure ships as a signed attestation rather than a zero-knowledge proof, and [PRIVACY.md](docs/PRIVACY.md) is precise about the difference.
 
 It deliberately does **not** attempt the full RFP architecture. That description includes Enclave-based confidential routing and private sub-accounts, **neither of which has shipped on Starknet yet**. Building on them today would be building on nothing. When they land, the routing layer is the natural next piece.
 
@@ -134,7 +144,7 @@ It deliberately does **not** attempt the full RFP architecture. That description
 - [ ] Sepolia deploy against `MockVault`
 - [ ] Three verified mainnet transactions
 - [ ] Mainnet deploy against a live ERC-4626 vault
-- [ ] Viewing-key solvency proof + public verifier page
+- [x] Selective disclosure — signed threshold attestations + public verifier
 - [ ] Demo video
 
 ### Open questions blocking Phase 2

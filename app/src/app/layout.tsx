@@ -24,6 +24,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/vault" className="hover:text-white">
                 Position
               </Link>
+              <Link href="/prove" className="hover:text-white">
+                Prove
+              </Link>
+              <Link href="/verify" className="hover:text-white">
+                Verify
+              </Link>
             </div>
           </div>
         </nav>

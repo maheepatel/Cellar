@@ -19,7 +19,7 @@ typechecks, registered on the sprint board.
 
 ---
 
-## Phase 1 — Three mainnet transactions
+## Phase 1 — Three mainnet transactions ⬅ blocked on a funded wallet
 
 The sprint scores nothing without three verified mainnet transaction hashes in
 `strk20.json`. This phase exists solely to produce them, and it comes before
@@ -42,7 +42,7 @@ time the contract has ever run.
 
 ---
 
-## Phase 2 — Live yield on mainnet
+## Phase 2 — Live yield on mainnet ⬅ blocked
 
 Deploy `YieldHelper` to mainnet, pinned at construction to a real Vesu vToken
 chosen for liquidity and a non-zero rate. Drive a full deposit → accrue →
@@ -56,7 +56,7 @@ the pool invokes atomically is a different tier of integration.
 
 ---
 
-## Phase 3 — Product surface
+## Phase 3 — Product surface ✅
 
 Position dashboard: shielded balance, live APR, accrued yield, earn and
 withdraw flows, withdrawal to a shadow account. Deployed publicly with no
@@ -70,17 +70,19 @@ Prizes are decided here. A polished screen beats one more feature, and
 
 ---
 
-## Phase 4 — Selective disclosure
+## Phase 4 — Selective disclosure ✅
 
-A viewing-key scoped proof that answers exactly one question — does this
-position clear a threshold — and reveals nothing else. Plus a verifier page a
-judge can open themselves.
+Signed threshold attestations plus a public verifier at `/verify` that needs
+no wallet — verification calls the signing account's own `is_valid_signature`
+on-chain, so it holds for smart accounts and multisig.
 
-This is the innovation beat. It is also the one place the Privacy SDK may be
-needed rather than the Wallet API, because holding a viewing key briefly is
-the entire point of the feature.
+Built as an **attestation**, not a zero-knowledge proof, and labelled that way
+throughout. A ZK proof of `balance >= threshold` over an encrypted note needs
+a circuit over the pool's commitment scheme; shipping an honest attestation
+beats calling a signature a proof. See PRIVACY.md.
 
-**Gate — a stranger verifies a claim without learning the balance.**
+**Gate met** — a stranger verifies a claim without learning the balance, and a
+forged attestation is correctly rejected.
 
 ---
 

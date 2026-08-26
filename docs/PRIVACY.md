@@ -95,6 +95,42 @@ Cellar adds nothing to this and removes nothing from it.
   risk, liquidation risk and rate risk in those markets are unchanged by
   privacy.
 
+## Selective disclosure
+
+The alternative to disclosure is usually all-or-nothing: hand over a viewing
+key and expose your entire history, or reveal nothing. Cellar adds a middle
+option.
+
+A holder signs one narrow statement — *"my shielded balance of X is at least
+Y"* — anchored to a block, expiring on a deadline they choose, using the
+Starknet account that owns the position. Anyone can then verify it at
+`/verify`, with no wallet, because verification calls the signing account's own
+`is_valid_signature` on-chain. That works for smart accounts, multisig and
+hardware wallets, not just plain ECDSA.
+
+**Be precise about what this is.**
+
+| It proves | It does not prove |
+|---|---|
+| This account authored this exact statement | That the statement is true |
+| The claim has not been altered by one character | Anything about balances the claim does not mention |
+| It was made at a stated block, within a stated window | Anything after the window expires |
+
+This is an **attestation**, not a zero-knowledge proof — the same instrument as
+a bank's proof-of-funds letter. Its value comes from the signer being
+identifiable and accountable, not from the mathematics making a lie impossible.
+A signer can sign something false, exactly as they can write a false letter.
+
+A true ZK proof of `balance >= threshold` over an encrypted note would need a
+circuit over the pool's commitment scheme. That is real work and we would
+rather ship an honest attestation than call a signature a proof. It is the
+natural next piece.
+
+What the holder gains regardless: a disclosure that is **bounded** (one fact),
+**expiring** (a window they set), **replay-resistant** (SNIP-12 domain
+separation and a nonce), and **cryptographically bound to an identifiable
+account** — instead of a viewing key that gives away everything, forever.
+
 ## Design choices that follow from all this
 
 - **No events.** `YieldHelper` emits nothing. An event carrying an amount or a
