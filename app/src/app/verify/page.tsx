@@ -58,19 +58,19 @@ function Verifier() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-14">
       <header className="mb-8">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
+        <p className="label">
           Cellar · Verifier
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">Check an attestation</h1>
+        <h1 className="display mt-3 text-[clamp(2rem,5vw,2.9rem)] leading-tight text-ash">Check an attestation</h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
           No wallet needed. The signature is checked against the chain by calling
           the signing account&rsquo;s own <code className="text-brass">is_valid_signature</code>.
         </p>
       </header>
 
-      <section className="panel mb-6 p-5">
+      <section className="panel mb-5 p-6">
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+          <span className="label">
             Attestation or link
           </span>
           <textarea
@@ -79,7 +79,7 @@ function Verifier() {
             rows={4}
             placeholder="Paste the attestation string, or the whole /verify?a=… link"
             spellCheck={false}
-            className="w-full resize-none rounded border border-edge bg-ink p-3 font-mono text-[11px] leading-relaxed outline-none focus:border-brass"
+            className="field resize-none leading-relaxed"
           />
         </label>
         <button
@@ -93,7 +93,7 @@ function Verifier() {
           {busy ? "checking…" : "Verify"}
         </button>
         {err && (
-          <p className="mt-3 rounded border border-rust/40 bg-rust/10 p-3 font-mono text-[12px] text-rust">
+          <p className="mt-3 rounded border border-rust/30 bg-rust/5 p-3 font-mono text-[12px] text-rust">
             {err}
           </p>
         )}
@@ -147,7 +147,7 @@ function Verifier() {
             )}
           </section>
 
-          <section className="panel mb-6 p-5">
+          <section className="panel mb-5 p-6">
             <h2 className="mb-4 text-sm font-semibold">Details</h2>
             <dl className="grid gap-2.5 font-mono text-[12px]">
               {[
@@ -181,15 +181,15 @@ function Verifier() {
         </>
       )}
 
-      <section className="panel border-l-2 border-l-brass p-5">
+      <section className="panel border-l-2 border-l-brass p-6">
         <h2 className="text-sm font-semibold">How to read this result</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-muted">
-          <strong className="text-white">&ldquo;Authentic&rdquo;</strong> means the named account
+          <strong className="text-ash">&ldquo;Authentic&rdquo;</strong> means the named account
           really did sign this exact statement — verified on-chain, so it holds for smart accounts
           and multisig too. Alter one character and it fails.
         </p>
         <p className="mt-3 text-[13px] leading-relaxed text-muted">
-          It does <strong className="text-white">not</strong> mean the statement is true. This is
+          It does <strong className="text-ash">not</strong> mean the statement is true. This is
           an attestation, not a zero-knowledge proof: a signer could sign something false, exactly
           as they could write a false letter. What it gives you is a claim that is bounded,
           expiring, and cryptographically bound to an identifiable account — instead of a viewing

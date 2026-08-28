@@ -1,13 +1,10 @@
 "use client";
 
-// Position dashboard — Phase 3.
+// Position dashboard.
 //
-// The screen a judge actually looks at. Shows the shielded balance, the vault
-// position, and the two operations that move between them, with a quote before
-// anything is signed.
-//
-// It reads the helper address from config/mainnet.json. Until Phase 2 deploys
-// it, the page says so plainly rather than pretending to work.
+// The hero screen. Shielded balance, the two operations that move capital
+// between the pool and a lending market, a quote before anything is signed,
+// and a stealth address to exit to.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CHAIN, DAPP_NAME, HELPER, TOKENS, contractUrl, shadowAccount, txUrl } from "@/lib/strk20";
@@ -70,7 +67,6 @@ export default function VaultPage() {
     [refresh],
   );
 
-  // Quote whenever the inputs settle.
   useEffect(() => {
     if (!deployed || !token) return;
     let cancelled = false;
@@ -112,7 +108,8 @@ export default function VaultPage() {
         amount: units,
         self: conn.address,
       };
-      const h = dir === "earn" ? await earn(conn.account, params) : await exitYield(conn.account, params);
+      const h =
+        dir === "earn" ? await earn(conn.account, params) : await exitYield(conn.account, params);
       setHash(h);
       await refresh(conn);
     } catch (e) {
@@ -137,12 +134,22 @@ export default function VaultPage() {
     return balances[token.address.toLowerCase()] ?? 0n;
   }, [balances, token]);
 
+  const amountValid = (() => {
+    try {
+      return token ? toUnits(amount, token.decimals) > 0n : false;
+    } catch {
+      return false;
+    }
+  })();
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-14">
-      <header className="mb-8">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">Cellar · Position</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">Earning, unlinkably</h1>
-        <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
+      <header className="mb-10 animate-rise">
+        <p className="label mb-4">Position</p>
+        <h1 className="display text-[clamp(2rem,5vw,2.9rem)] leading-tight text-ash">
+          Earning, <span className="italic text-brass">unlinkably</span>
+        </h1>
+        <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-muted">
           Shielded capital routed into a lending market through an anonymizer.
           The flow is public; you are not.
         </p>
@@ -150,76 +157,75 @@ export default function VaultPage() {
 
       {!deployed && (
         <div className="panel mb-6 border-l-2 border-l-brass p-5">
-          <h2 className="text-sm font-semibold">Helper not deployed yet</h2>
+          <p className="text-[14px] font-medium text-ash">Anonymizer not deployed yet</p>
           <p className="mt-2 text-[13px] leading-relaxed text-muted">
-            Phase 2 deploys <code className="text-brass">YieldHelper</code> to mainnet
-            pinned to a live ERC-4626 vault. Until then this page is inert — the
-            address and allowlist come from{" "}
-            <code className="text-brass">config/mainnet.json</code>, and both are empty.
+            The helper address and vault allowlist come from{" "}
+            <code className="text-brass">config/mainnet.json</code>, and both are
+            still empty. This screen lights up the moment it lands on mainnet.
           </p>
         </div>
       )}
 
-      {/* Wallet + balances */}
-      <section className="panel mb-6 p-5">
+      {/* balance */}
+      <section className="panel-lit mb-5 p-6">
         {!conn ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-2 text-[13px] text-muted">Connect to see your position:</span>
-            {wallets.length === 0 && (
-              <span className="text-[13px] text-muted">no Starknet wallet detected</span>
-            )}
-            {wallets.map((w) => (
-              <button key={w.id} onClick={() => onConnect(w)} className="btn btn-ghost">
-                {w.name}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[14px] text-muted">Connect to see your position</span>
+            <div className="flex gap-2">
+              {wallets.length === 0 && (
+                <span className="font-mono text-[12px] text-faint">
+                  no Starknet wallet detected
+                </span>
+              )}
+              {wallets.map((w) => (
+                <button key={w.id} onClick={() => onConnect(w)} className="btn btn-ghost">
+                  {w.name}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted">Shielded</p>
-              <p className="mt-1 font-mono text-xl tabular-nums">
-                {shielded === null ? "—" : fromUnits(shielded, token?.decimals ?? 18)}
-                <span className="ml-1 text-[13px] text-muted">{symbol}</span>
+              <p className="label">Shielded {symbol}</p>
+              <p className="num mt-2 text-[2.6rem] leading-none text-ash">
+                {shielded === null ? "···" : fromUnits(shielded, token?.decimals ?? 18)}
               </p>
             </div>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted">Account</p>
-              <p className="mt-1 font-mono text-[13px]">{short(conn.address)}</p>
-            </div>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted">Wallet API</p>
-              <p className={`mt-1 font-mono text-[13px] ${conn.strk20 ? "text-moss" : "text-rust"}`}>
-                {conn.strk20 ? "supported" : "unsupported"}
-              </p>
+            <div className="flex flex-col items-end gap-1.5">
+              <span className={`chip ${conn.strk20 ? "chip-ok" : "chip-bad"}`}>
+                <span className={`dot ${conn.strk20 ? "bg-moss" : "bg-rust"}`} />
+                {conn.strk20 ? "wallet api" : "unsupported"}
+              </span>
+              <span className="num text-[11px] text-faint">{short(conn.address)}</span>
             </div>
           </div>
         )}
       </section>
 
-      {/* Action */}
-      <section className="panel mb-6 p-5">
-        <div className="mb-4 flex gap-1 rounded border border-edge p-1">
+      {/* action */}
+      <section className="panel mb-5 p-6">
+        <div className="mb-5 inline-flex rounded-md border border-edge p-1">
           {(["earn", "exit"] as Dir[]).map((d) => (
             <button
               key={d}
               onClick={() => setDir(d)}
-              className={`flex-1 rounded px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider transition ${
-                dir === d ? "bg-brass text-ink" : "text-muted hover:text-white"
+              className={`rounded px-5 py-1.5 font-mono text-[11px] uppercase tracking-label transition-colors ${
+                dir === d ? "bg-brass text-ink" : "text-faint hover:text-ash"
               }`}
             >
-              {d === "earn" ? "Earn" : "Exit"}
+              {d}
             </button>
           ))}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">Token</span>
+        <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+          <label className="flex flex-col gap-2">
+            <span className="label">Token</span>
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+              className="field"
             >
               {Object.keys(TOKENS).map((s) => (
                 <option key={s} value={s}>
@@ -228,82 +234,98 @@ export default function VaultPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">Amount</span>
+          <label className="flex flex-col gap-2">
+            <span className="label">Amount</span>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               spellCheck={false}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+              className="field"
             />
           </label>
         </div>
 
-        <div className="mt-4 rounded border border-edge bg-ink px-4 py-3">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted">
-            You receive, approximately
+        <div className="mt-5 rounded-md border border-edge bg-ink px-5 py-4">
+          <p className="label">You receive, approximately</p>
+          <p className="num mt-1.5 text-xl text-ash">
+            {quoting ? (
+              <span className="text-faint">quoting…</span>
+            ) : (
+              (quote ?? <span className="text-faint">—</span>)
+            )}
           </p>
-          <p className="mt-1 font-mono text-lg tabular-nums">
-            {quoting ? "quoting…" : (quote ?? "—")}
-          </p>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted">
-            A quote from the vault at the current block. The amount actually credited
-            is the measured balance delta at execution, so it can differ if the rate moves.
+          <p className="mt-2 text-[12px] leading-relaxed text-faint">
+            The vault&rsquo;s own quote at the current block. What actually gets
+            credited is the measured balance delta at execution, so it can differ
+            if the rate moves.
           </p>
         </div>
 
         <button
           onClick={run}
-          disabled={!conn?.strk20 || !deployed || busy}
-          className="btn btn-primary mt-4 w-full"
+          disabled={!conn?.strk20 || !deployed || busy || !amountValid}
+          className="btn btn-primary mt-5 w-full py-3"
         >
           {busy ? "proving…" : dir === "earn" ? "Shield into yield" : "Exit position"}
         </button>
 
         {hash && (
-          <p className="mt-3 font-mono text-[12px]">
-            <a href={txUrl(hash)} target="_blank" rel="noreferrer" className="text-brass underline">
-              {short(hash)} ↗
-            </a>
-          </p>
+          <a
+            href={txUrl(hash)}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 block text-center font-mono text-[12px] text-brass hover:text-brass-lit"
+          >
+            {short(hash)} ↗
+          </a>
         )}
         {err && (
-          <p className="mt-3 rounded border border-rust/40 bg-rust/10 p-3 font-mono text-[12px] leading-relaxed text-rust">
+          <p className="mt-4 rounded-md border border-rust/30 bg-rust/5 p-3 font-mono text-[12px] leading-relaxed text-rust">
             {err}
           </p>
         )}
       </section>
 
-      {/* Shadow account */}
-      <section className="panel p-5">
-        <h2 className="text-sm font-semibold">Stealth withdrawal address</h2>
-        <p className="mt-2 max-w-lg text-[13px] leading-relaxed text-muted">
+      {/* stealth */}
+      <section className="panel p-6">
+        <p className="text-[15px] font-medium text-ash">Stealth withdrawal address</p>
+        <p className="mt-2 max-w-lg text-[14px] leading-relaxed text-muted">
           A shadow account scoped to this app. Exiting here rather than to your
           main wallet is what keeps the deposit and the withdrawal unlinked —
-          withdrawing to the address that deposited undoes the pool.
+          withdrawing to the address that deposited undoes the pool entirely.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button onClick={deriveShadow} disabled={!conn} className="btn btn-ghost">
             Derive address
           </button>
-          {shadow && <code className="font-mono text-[12px] text-moss">{short(shadow)}</code>}
+          {shadow && <code className="num text-[12px] text-moss">{short(shadow)}</code>}
         </div>
       </section>
 
-      <footer className="mt-8 font-mono text-[11px] text-muted">
-        Pool{" "}
-        <a className="text-brass underline" href={contractUrl(CHAIN.pool)} target="_blank" rel="noreferrer">
+      <p className="mt-6 font-mono text-[11px] text-faint">
+        pool{" "}
+        <a
+          href={contractUrl(CHAIN.pool)}
+          target="_blank"
+          rel="noreferrer"
+          className="text-brass hover:text-brass-lit"
+        >
           {short(CHAIN.pool)}
         </a>
         {deployed && (
           <>
-            {" · Helper "}
-            <a className="text-brass underline" href={contractUrl(HELPER.address)} target="_blank" rel="noreferrer">
+            {" · helper "}
+            <a
+              href={contractUrl(HELPER.address)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brass hover:text-brass-lit"
+            >
               {short(HELPER.address)}
             </a>
           </>
         )}
-      </footer>
+      </p>
     </main>
   );
 }

@@ -74,10 +74,10 @@ export default function ProvePage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-14">
       <header className="mb-8">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
+        <p className="label">
           Cellar · Disclosure
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">Prove one thing only</h1>
+        <h1 className="display mt-3 text-[clamp(2rem,5vw,2.9rem)] leading-tight text-ash">Prove one thing only</h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
           Sign a single statement about your position — a threshold, at a block,
           for a limited time — instead of surrendering a viewing key that would
@@ -85,7 +85,7 @@ export default function ProvePage() {
         </p>
       </header>
 
-      <section className="panel mb-6 p-5">
+      <section className="panel mb-5 p-6">
         {!conn ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-2 text-[13px] text-muted">Connect to sign:</span>
@@ -106,15 +106,15 @@ export default function ProvePage() {
         )}
       </section>
 
-      <section className="panel mb-6 p-5">
+      <section className="panel mb-5 p-6">
         <h2 className="mb-4 text-sm font-semibold">The statement</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">Token</span>
+            <span className="label">Token</span>
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+              className="field"
             >
               {Object.keys(TOKENS).map((s) => (
                 <option key={s} value={s}>
@@ -124,24 +124,24 @@ export default function ProvePage() {
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+            <span className="label">
               At least
             </span>
             <input
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
               spellCheck={false}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+              className="field"
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+            <span className="label">
               Valid for
             </span>
             <select
               value={window_}
               onChange={(e) => setWindow(Number(e.target.value))}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+              className="field"
             >
               {WINDOWS.map((w) => (
                 <option key={w.seconds} value={w.seconds}>
@@ -169,21 +169,21 @@ export default function ProvePage() {
         </p>
 
         {err && (
-          <p className="mt-3 rounded border border-rust/40 bg-rust/10 p-3 font-mono text-[12px] text-rust">
+          <p className="mt-3 rounded border border-rust/30 bg-rust/5 p-3 font-mono text-[12px] text-rust">
             {err}
           </p>
         )}
       </section>
 
       {att && (
-        <section className="panel mb-6 p-5">
+        <section className="panel mb-5 p-6">
           <h2 className="mb-3 text-sm font-semibold">Share this link</h2>
           <textarea
             readOnly
             value={link}
             rows={4}
             onFocus={(e) => e.currentTarget.select()}
-            className="w-full resize-none rounded border border-edge bg-ink p-3 font-mono text-[11px] leading-relaxed outline-none focus:border-brass"
+            className="field resize-none leading-relaxed"
           />
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -207,16 +207,16 @@ export default function ProvePage() {
         </section>
       )}
 
-      <section className="panel border-l-2 border-l-brass p-5">
+      <section className="panel border-l-2 border-l-brass p-6">
         <h2 className="text-sm font-semibold">What this proves, and what it does not</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-muted">
-          <strong className="text-white">It proves</strong> that this account authored this exact
+          <strong className="text-ash">It proves</strong> that this account authored this exact
           statement. A verifier checks that against the chain by calling your account&rsquo;s own{" "}
           <code className="text-brass">is_valid_signature</code>, so it holds for smart accounts,
           multisig and hardware wallets. Change one character and verification fails.
         </p>
         <p className="mt-3 text-[13px] leading-relaxed text-muted">
-          <strong className="text-white">It does not prove</strong> the statement is true. This is
+          <strong className="text-ash">It does not prove</strong> the statement is true. This is
           an attestation, the same instrument as a bank&rsquo;s proof-of-funds letter — its value
           comes from the signer being identifiable and accountable, not from the maths making a
           lie impossible. A zero-knowledge proof of the balance itself would need a circuit over

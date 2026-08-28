@@ -1,332 +1,273 @@
 "use client";
 
-// Day 0 console.
+// Landing.
 //
-// The sprint scores nothing without three verified mainnet transaction hashes
-// in strk20.json. This screen produces them, records them automatically, and
-// emits that file's exact shape.
-//
-// Deliberately plain. The product dashboard is Phase 3; this is the gate.
+// A judge lands here first, so it has one job: make the thesis legible in
+// fifteen seconds, and prove the thing is real by showing live chain data
+// rather than claiming it.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CHAIN, TOKENS, txUrl } from "@/lib/strk20";
-import { fromUnits, privateTransfer, shield, toUnits, unshield } from "@/lib/actions";
-import { connect, discover, short, type Connection, type DiscoveredWallet } from "@/lib/wallet";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { CHAIN, HELPER, contractUrl, headBlock, poolHoldings } from "@/lib/strk20";
+import { fromUnits } from "@/lib/actions";
 
-type OpId = "shield" | "transfer" | "unshield";
+type Holding = { symbol: string; address: string; decimals: number; balance: bigint };
 
-type Op = {
-  id: OpId;
-  title: string;
-  detail: string;
-  /** Needs a destination address. */
-  recipient?: "self" | "fresh";
-};
-
-const OPS: Op[] = [
-  {
-    id: "shield",
-    title: "Shield",
-    detail:
-      "Move public tokens into the pool as an encrypted note. Your address and the amount are public by design, and the deposit is screened on-chain. Privacy begins once funds are inside. This first action also registers your viewing key.",
-  },
-  {
-    id: "transfer",
-    title: "Private transfer",
-    detail:
-      "Note to note, inside the pool. Only encrypted notes and nullifiers are emitted — no amounts, no parties. Sending to your own address is a valid way to exercise it.",
-    recipient: "self",
-  },
-  {
-    id: "unshield",
-    title: "Unshield",
-    detail:
-      "Exit to a public address. Use a fresh one — withdrawing to the wallet that deposited re-links both ends and undoes the point of the pool.",
-    recipient: "fresh",
-  },
-];
-
-type OpState = { status: "idle" | "running" | "done" | "error"; hash?: string; error?: string };
-
-export default function Page() {
-  const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
-  const [conn, setConn] = useState<Connection | null>(null);
-  const [connError, setConnError] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
-
-  const [symbol, setSymbol] = useState("USDC");
-  const [amount, setAmount] = useState("0.5");
-  const [recipient, setRecipient] = useState("");
-  const [state, setState] = useState<Record<OpId, OpState>>({
-    shield: { status: "idle" },
-    transfer: { status: "idle" },
-    unshield: { status: "idle" },
-  });
-
-  const token = TOKENS[symbol];
+export default function Landing() {
+  const [holdings, setHoldings] = useState<Holding[] | null>(null);
+  const [block, setBlock] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    // Wallets inject asynchronously; one retry catches the mount race.
-    setWallets(discover());
-    const t = setTimeout(() => setWallets(discover()), 600);
-    return () => clearTimeout(t);
+    let alive = true;
+    Promise.all([poolHoldings(), headBlock()])
+      .then(([h, b]) => {
+        if (!alive) return;
+        setHoldings(h);
+        setBlock(b);
+      })
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
   }, []);
-
-  const onConnect = useCallback(async (w: DiscoveredWallet) => {
-    setConnecting(true);
-    setConnError(null);
-    try {
-      setConn(await connect(w));
-    } catch (e) {
-      setConnError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setConnecting(false);
-    }
-  }, []);
-
-  const run = useCallback(
-    async (op: Op) => {
-      if (!conn || !token) return;
-      setState((s) => ({ ...s, [op.id]: { status: "running" } }));
-      try {
-        const units = toUnits(amount, token.decimals);
-        if (units === 0n) throw new Error("Amount must be greater than zero");
-
-        const to = op.recipient === "self" ? conn.address : recipient.trim();
-        if (op.recipient && !to) throw new Error("Enter a destination address");
-
-        let hash: string;
-        if (op.id === "shield") hash = await shield(conn.account, token.address, units);
-        else if (op.id === "transfer")
-          hash = await privateTransfer(conn.account, token.address, units, to);
-        else hash = await unshield(conn.account, token.address, units, to);
-
-        setState((s) => ({ ...s, [op.id]: { status: "done", hash } }));
-      } catch (e) {
-        setState((s) => ({
-          ...s,
-          [op.id]: { status: "error", error: e instanceof Error ? e.message : String(e) },
-        }));
-      }
-    },
-    [conn, token, amount, recipient],
-  );
-
-  const hashes = useMemo(
-    () => OPS.map((o) => state[o.id].hash).filter((h): h is string => Boolean(h)),
-    [state],
-  );
-
-  const canRun = Boolean(conn?.strk20 && token);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-14">
-      <header className="mb-10">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
-          Cellar · Day 0
-        </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">Three mainnet transactions</h1>
-        <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
-          Nothing is scored without these. Run them here, then commit the output
-          to <code className="text-brass">strk20.json</code> at the repo root.
-        </p>
-      </header>
+    <main>
+      {/* ---------- thesis ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:pt-28">
+        <div className="max-w-3xl animate-rise">
+          <p className="label mb-6 flex items-center gap-2">
+            <span className="dot animate-pulse-dot bg-brass" />
+            Starknet mainnet · STRK20
+          </p>
 
-      {/* Wallet */}
-      <section className="panel mb-6 p-5">
-        <h2 className="mb-1 text-sm font-semibold">Wallet</h2>
-        <p className="mb-4 text-[13px] text-muted">
-          STRK20 privacy is mainnet only. Support is probed at runtime rather than
-          assumed from a wallet list.
-        </p>
+          <h1 className="display text-[clamp(2.6rem,7vw,4.6rem)] leading-[1.02] text-ash">
+            Your balance should not be
+            <br />
+            <span className="italic text-brass">a public URL.</span>
+          </h1>
 
-        {!conn && (
-          <div className="flex flex-wrap gap-2">
-            {wallets.length === 0 && (
-              <p className="text-[13px] text-muted">
-                No Starknet wallet detected in this browser.
+          <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-muted">
+            Bitcoin was invented so value could move without surveillance.
+            Seventeen years later, anyone can read your entire balance sheet,
+            reconstruct your strategy, and watch where your money goes next.
+          </p>
+
+          <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted">
+            Cellar shields an asset into the STRK20 privacy pool and routes it
+            into a live lending market through a custom anonymizer contract.
+            The yield is real. The position is not linkable to you.
+          </p>
+
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href="/vault" className="btn btn-primary">
+              Open your position
+            </Link>
+            <Link href="/verify" className="btn btn-ghost">
+              Verify an attestation
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- live chain data ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <div className="panel-lit p-6 sm:p-8">
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+              <h2 className="display text-2xl text-ash">The anonymity set</h2>
+              <p className="mt-1.5 max-w-lg text-[14px] leading-relaxed text-muted">
+                What the pool holds right now, read live from mainnet. Public by
+                design — the pool&rsquo;s edges are visible, and only who owns
+                which share of it is not.
               </p>
-            )}
-            {wallets.map((w) => (
-              <button
-                key={w.id}
-                onClick={() => onConnect(w)}
-                disabled={connecting}
-                className="btn btn-ghost"
-              >
-                {w.name}
-              </button>
+            </div>
+            <p className="num text-[11px] text-faint">
+              {block ? `block ${block.toLocaleString()}` : failed ? "rpc unreachable" : "reading…"}
+            </p>
+          </div>
+
+          <div className="grid gap-px overflow-hidden rounded-md border border-edge bg-edge sm:grid-cols-2 lg:grid-cols-4">
+            {(holdings ?? Array.from({ length: 4 }, () => null)).map((h, i) => (
+              <div key={h?.symbol ?? i} className="bg-surface p-5">
+                <p className="label">{h?.symbol ?? "—"}</p>
+                <p className="num mt-2 text-2xl text-ash">
+                  {h
+                    ? Number(fromUnits(h.balance, h.decimals)).toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })
+                    : failed
+                      ? "—"
+                      : "···"}
+                </p>
+                <p className="mt-1 font-mono text-[10px] text-faint">shielded in pool</p>
+              </div>
             ))}
           </div>
-        )}
 
-        {conn && (
-          <dl className="grid gap-2 font-mono text-[13px]">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">address</dt>
-              <dd>{short(conn.address)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">network</dt>
-              <dd>{conn.chainId === CHAIN.idHex ? "SN_MAIN" : conn.chainId}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">STRK20 Wallet API</dt>
-              <dd className={conn.strk20 ? "text-moss" : "text-rust"}>
-                {conn.strk20 ? "supported" : "not supported by this wallet"}
-              </dd>
-            </div>
-          </dl>
-        )}
-
-        {connError && (
-          <p className="mt-4 rounded border border-rust/40 bg-rust/10 p-3 text-[13px] text-rust">
-            {connError}
-          </p>
-        )}
-      </section>
-
-      {/* Parameters */}
-      <section className="panel mb-6 p-5">
-        <h2 className="mb-4 text-sm font-semibold">Parameters</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
-              Token
-            </span>
-            <select
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
+          <p className="mt-4 font-mono text-[11px] text-faint">
+            pool{" "}
+            <a
+              href={contractUrl(CHAIN.pool)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brass transition-colors hover:text-brass-lit"
             >
-              {Object.keys(TOKENS).map((s) => (
-                <option key={s} value={s}>
-                  {s} ({TOKENS[s].decimals} dp)
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
-              Amount
-            </span>
-            <input
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              spellCheck={false}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
-              Unshield destination — use a fresh address
-            </span>
-            <input
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder="0x…"
-              spellCheck={false}
-              className="rounded border border-edge bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-brass"
-            />
-          </label>
+              {CHAIN.pool.slice(0, 10)}…{CHAIN.pool.slice(-6)} ↗
+            </a>
+          </p>
         </div>
-        {token && (
-          <p className="mt-3 font-mono text-[11px] text-muted">
-            {symbol} → {short(token.address)} · {(() => {
-              try {
-                return `${fromUnits(toUnits(amount, token.decimals), token.decimals)} ${symbol}`;
-              } catch {
-                return "invalid amount";
-              }
-            })()}
+      </section>
+
+      {/* ---------- the honest claim ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <div className="mb-8 max-w-2xl">
+          <p className="label mb-3">The claim, precisely</p>
+          <h2 className="display text-3xl leading-tight text-ash">
+            Visible flow, invisible participant.
+          </h2>
+          <p className="mt-4 text-[15px] leading-relaxed text-muted">
+            Anything routed through an anonymizer reveals its amount and timing.
+            Cellar gives you <span className="text-ash">identity</span> privacy,
+            not amount privacy — and says so, because a privacy tool that
+            overclaims is worse than one that ships late.
+          </p>
+        </div>
+
+        <div className="grid gap-px overflow-hidden rounded-lg border border-edge bg-edge md:grid-cols-2">
+          <div className="bg-surface p-6">
+            <p className="label mb-4 text-moss">Hidden</p>
+            <ul className="space-y-3 text-[14px] leading-relaxed text-muted">
+              <li>
+                <span className="text-ash">Who you are.</span> Nothing on-chain links
+                an earn action to your wallet
+              </li>
+              <li>Your total shielded balance across all notes</li>
+              <li>The link between your deposit and your withdrawal address</li>
+              <li>Note amounts and ownership inside the pool</li>
+              <li>
+                Note-to-note transfers — <span className="text-ash">both</span> amounts
+                and parties
+              </li>
+            </ul>
+          </div>
+          <div className="bg-surface p-6">
+            <p className="label mb-4 text-steel">Visible</p>
+            <ul className="space-y-3 text-[14px] leading-relaxed text-muted">
+              <li>The amount and timing of each earn or withdraw</li>
+              <li>Which vault was used, and that the pool paid the helper</li>
+              <li>Depositor address and amount at the shield step</li>
+              <li>Withdrawal recipient and amount</li>
+              <li>Published nullifiers, unlinkable without a viewing key</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- mechanism ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <p className="label mb-3">How one private deposit works</p>
+        <h2 className="display mb-8 text-3xl text-ash">
+          Five steps, one atomic transaction.
+        </h2>
+
+        <ol className="grid gap-px overflow-hidden rounded-lg border border-edge bg-edge">
+          {[
+            {
+              n: "01",
+              t: "The pool pays the helper",
+              d: "A plain public transfer. Observers see the pool paid a contract — never who asked it to.",
+            },
+            {
+              n: "02",
+              t: "privacy_invoke",
+              d: "The pool calls our anonymizer through the protocol's INVOKE_SELECTOR.",
+            },
+            {
+              n: "03",
+              t: "Into the vault",
+              d: "The helper deposits into an allowlisted ERC-4626 market and measures what actually arrived.",
+              ours: true,
+            },
+            {
+              n: "04",
+              t: "Approve, never transfer",
+              d: "The helper approves the pool to pull the output. The pool does the pulling itself.",
+              ours: true,
+            },
+            {
+              n: "05",
+              t: "Credited as an encrypted note",
+              d: "The pool pulls the shares and credits them to a note only you can open.",
+            },
+          ].map((s) => (
+            <li key={s.n} className="flex gap-5 bg-surface p-6">
+              <span
+                className={`num shrink-0 text-[12px] ${s.ours ? "text-brass" : "text-faint"}`}
+              >
+                {s.n}
+              </span>
+              <div>
+                <p className="text-[15px] font-medium text-ash">
+                  {s.t}
+                  {s.ours && (
+                    <span className="ml-2 font-mono text-[10px] uppercase tracking-label text-brass">
+                      our contract
+                    </span>
+                  )}
+                </p>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{s.d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mt-4 text-[13px] text-faint">
+          If any step fails, all five revert. The helper never holds custody across
+          blocks, never learns who you are, and never touches an encrypted note.
+        </p>
+      </section>
+
+      {/* ---------- guarantees ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-24">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              t: "No owner, no admin key",
+              d: "The vault allowlist is written once in the constructor and has no setter. Nobody — including us — can redirect funds after deployment.",
+            },
+            {
+              t: "Measured, not reported",
+              d: "Credit is the observed balance delta, never the vault's own return value. A misreporting vault cannot mint a note out of nothing.",
+            },
+            {
+              t: "No events, no database",
+              d: "The contract emits nothing and the app stores nothing server-side. Either would recreate the trace the pool exists to remove.",
+            },
+          ].map((c) => (
+            <div key={c.t} className="panel p-6">
+              <p className="text-[15px] font-medium text-ash">{c.t}</p>
+              <p className="mt-2 text-[14px] leading-relaxed text-muted">{c.d}</p>
+            </div>
+          ))}
+        </div>
+
+        {!HELPER.address && (
+          <p className="mt-6 rounded-md border border-edge bg-raised px-4 py-3 text-[13px] text-muted">
+            <span className="text-brass">Status:</span> contracts written and tested,
+            app live. The anonymizer is pending its mainnet deployment — see{" "}
+            <a
+              href="https://github.com/maheepatel/Cellar/blob/main/docs/PHASES.md"
+              target="_blank"
+              rel="noreferrer"
+              className="text-brass underline underline-offset-2"
+            >
+              PHASES.md
+            </a>
+            .
           </p>
         )}
-      </section>
-
-      {/* Operations */}
-      <section className="mb-6 space-y-3">
-        {OPS.map((op, i) => {
-          const st = state[op.id];
-          return (
-            <article key={op.id} className="panel p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-[15px] font-semibold">
-                    <span className="mr-2 font-mono text-xs text-brass">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {op.title}
-                  </h3>
-                  <p className="mt-2 max-w-lg text-[13px] leading-relaxed text-muted">
-                    {op.detail}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded px-2 py-1 font-mono text-[10px] uppercase tracking-wider ${
-                    st.status === "done"
-                      ? "bg-moss/15 text-moss"
-                      : st.status === "error"
-                        ? "bg-rust/15 text-rust"
-                        : "bg-edge text-muted"
-                  }`}
-                >
-                  {st.status === "running" ? "proving…" : st.status}
-                </span>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => run(op)}
-                  disabled={!canRun || st.status === "running"}
-                  className="btn btn-primary"
-                >
-                  {st.status === "done" ? "Run again" : `Run ${op.title.toLowerCase()}`}
-                </button>
-                {st.hash && (
-                  <a href={txUrl(st.hash)} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                    Voyager ↗
-                  </a>
-                )}
-                {st.hash && (
-                  <code className="font-mono text-[11px] text-muted">{short(st.hash)}</code>
-                )}
-              </div>
-
-              {st.error && (
-                <p className="mt-3 rounded border border-rust/40 bg-rust/10 p-3 font-mono text-[12px] leading-relaxed text-rust">
-                  {st.error}
-                </p>
-              )}
-            </article>
-          );
-        })}
-      </section>
-
-      {/* Output */}
-      <section className="panel p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">strk20.json</h2>
-          <span className="font-mono text-[11px] text-muted">{hashes.length} / 3</span>
-        </div>
-        <pre className="overflow-x-auto rounded bg-ink p-4 font-mono text-[12px] leading-relaxed">
-{JSON.stringify(
-  { transactions: hashes, contracts: [], demo_video: "", demo_url: "" },
-  null,
-  2,
-)}
-        </pre>
-        <p className="mt-3 text-[12px] text-muted">
-          Pool{" "}
-          <a
-            className="text-brass underline"
-            href={`${CHAIN.explorer}/contract/${CHAIN.pool}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {short(CHAIN.pool)}
-          </a>{" "}
-          · RPC {CHAIN.rpcUrl}
-        </p>
       </section>
     </main>
   );

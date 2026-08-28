@@ -6,42 +6,147 @@
   color-scheme: dark;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: theme("colors.ink");
-  color: #E6E9F0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: theme("colors.ink");
+  background-image: theme("backgroundImage.vignette");
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: theme("colors.ash");
+  font-family: theme("fontFamily.sans");
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-.panel {
-  background: theme("colors.panel");
-  border: 1px solid theme("colors.edge");
-  border-radius: 6px;
+@layer components {
+  /* ---------- surfaces ---------- */
+  .panel {
+    @apply rounded-lg border border-edge bg-surface shadow-panel;
+  }
+  .panel-lit {
+    @apply rounded-lg border border-edge bg-surface shadow-lifted;
+    position: relative;
+    overflow: hidden;
+  }
+  /* A single hairline of brass along the top edge — cellar hardware. */
+  .panel-lit::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      theme("colors.brass") 30%,
+      theme("colors.brass") 70%,
+      transparent
+    );
+    opacity: 0.5;
+  }
+
+  /* ---------- type ---------- */
+  .label {
+    @apply font-mono text-[10px] uppercase tracking-label text-faint;
+  }
+  .display {
+    @apply font-display font-normal tracking-[-0.01em];
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+
+  /* ---------- controls ---------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5
+           text-[13px] font-medium transition-all duration-150;
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-35;
+  }
+  .btn-primary {
+    @apply bg-brass text-ink;
+  }
+  .btn-primary:not(:disabled):hover {
+    @apply bg-brass-lit;
+  }
+  .btn-ghost {
+    @apply border border-edge bg-raised text-ash;
+  }
+  .btn-ghost:not(:disabled):hover {
+    @apply border-brass-dim text-brass-lit;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-edge bg-ink px-3.5 py-2.5
+           font-mono text-[13px] text-ash outline-none transition-colors;
+  }
+  .field:focus {
+    @apply border-brass-dim;
+  }
+  .field::placeholder {
+    @apply text-faint;
+  }
+
+  /* ---------- status ---------- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded px-2 py-1 font-mono
+           text-[10px] uppercase tracking-label;
+  }
+  .chip-idle {
+    @apply bg-raised text-faint;
+  }
+  .chip-ok {
+    @apply bg-moss/10 text-moss;
+  }
+  .chip-bad {
+    @apply bg-rust/10 text-rust;
+  }
+  .chip-work {
+    @apply bg-brass/10 text-brass-lit;
+  }
+
+  .dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full;
+  }
 }
 
-.btn {
-  border-radius: 5px;
-  padding: 0.6rem 1.05rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: opacity 0.15s ease;
-}
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.btn-primary {
-  background: theme("colors.brass");
-  color: #14161B;
-}
-.btn-ghost {
-  border: 1px solid theme("colors.edge");
-  color: #E6E9F0;
-}
-.btn:not(:disabled):hover {
-  opacity: 0.88;
-}
-:focus-visible {
+*:focus-visible {
   outline: 2px solid theme("colors.brass");
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect users who ask for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: theme("colors.brass");
+  color: theme("colors.ink");
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: theme("colors.ink");
+}
+::-webkit-scrollbar-thumb {
+  background: theme("colors.edge");
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: theme("colors.brass-dim");
 }

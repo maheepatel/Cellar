@@ -152,6 +152,48 @@ export async function shadowAccount(
   return account.strk20ShadowAccountCommitment(dappName as never, nonce as never);
 }
 
+/**
+ * How much of each token the privacy pool currently holds.
+ *
+ * This is a plain `balance_of` on each ERC-20 against the pool address — fully
+ * public information, and deliberately so. The pool's edges are visible by
+ * design; what is hidden is who owns which share of it. Reading it needs no
+ * wallet and no viewing key, which is exactly the point: the anonymity set is
+ * something anyone can audit.
+ */
+export async function poolHoldings(): Promise<
+  { symbol: string; address: string; decimals: number; balance: bigint }[]
+> {
+  const p = rpc();
+  const entries = Object.entries(TOKENS);
+
+  const results = await Promise.all(
+    entries.map(async ([symbol, t]) => {
+      try {
+        const res = await p.callContract({
+          contractAddress: t.address,
+          entrypoint: "balance_of",
+          calldata: [CHAIN.pool],
+        });
+        // u256, low limb first.
+        const balance = BigInt(res[0]) + (BigInt(res[1] ?? "0x0") << 128n);
+        return { symbol, address: t.address, decimals: t.decimals, balance };
+      } catch {
+        // A token the pool has never held may not respond; treat as zero
+        // rather than failing the whole panel.
+        return { symbol, address: t.address, decimals: t.decimals, balance: 0n };
+      }
+    }),
+  );
+
+  return results;
+}
+
+/** Current head block — cheap liveness signal for the UI. */
+export async function headBlock(): Promise<number> {
+  return rpc().getBlockNumber();
+}
+
 export function txUrl(hash: string): string {
   return `${CHAIN.explorer}/tx/${hash}`;
 }

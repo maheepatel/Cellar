@@ -65,7 +65,8 @@ app/
   src/lib/strk20.ts        Wallet API integration — actions, u256 split, shadow accounts
   src/lib/wallet.ts        discovery, connection, mainnet guard, capability probe
   src/lib/attest.ts        SNIP-12 attestations, issue + on-chain verify
-  src/app/page.tsx         Day 0 console
+  src/app/page.tsx         landing, with live pool holdings read from mainnet
+  src/app/day0/            Day 0 console
   src/app/vault/           position dashboard
   src/app/prove/           issue a disclosure
   src/app/verify/          public verifier, no wallet needed
