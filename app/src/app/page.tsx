@@ -2,14 +2,17 @@
 
 // Landing.
 //
-// A judge lands here first, so it has one job: make the thesis legible in
-// fifteen seconds, and prove the thing is real by showing live chain data
-// rather than claiming it.
+// A judge lands here first. It has one job: make the thesis legible in fifteen
+// seconds, and prove the thing is real by showing live chain data rather than
+// claiming it.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CHAIN, HELPER, contractUrl, headBlock, poolHoldings } from "@/lib/strk20";
 import { fromUnits } from "@/lib/actions";
+import { PoolChart } from "@/components/PoolChart";
+import { FlowDiagram } from "@/components/FlowDiagram";
+import { Faq } from "@/components/Faq";
 
 type Holding = { symbol: string; address: string; decimals: number; balance: bigint };
 
@@ -34,12 +37,13 @@ export default function Landing() {
 
   return (
     <main>
-      {/* ---------- thesis ---------- */}
-      <section className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:pt-28">
+      {/* ---------- hero ---------- */}
+      <section className="relative mx-auto max-w-5xl px-6 pb-20 pt-20 sm:pt-28">
         <div className="max-w-3xl animate-rise">
           <p className="label mb-6 flex items-center gap-2">
             <span className="dot animate-pulse-dot bg-brass" />
-            Starknet mainnet · STRK20
+            live on starknet mainnet
+            {block && <span className="text-faint">· block {block.toLocaleString()}</span>}
           </p>
 
           <h1 className="display text-[clamp(2.6rem,7vw,4.6rem)] leading-[1.02] text-ash">
@@ -56,8 +60,8 @@ export default function Landing() {
 
           <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted">
             Cellar shields an asset into the STRK20 privacy pool and routes it
-            into a live lending market through a custom anonymizer contract.
-            The yield is real. The position is not linkable to you.
+            into a lending market through a custom anonymizer contract. The
+            yield is real. The position is not linkable to you.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-3">
@@ -71,53 +75,42 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ---------- live chain data ---------- */}
-      <section className="mx-auto max-w-5xl px-6 pb-20">
-        <div className="panel-lit p-6 sm:p-8">
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <h2 className="display text-2xl text-ash">The anonymity set</h2>
-              <p className="mt-1.5 max-w-lg text-[14px] leading-relaxed text-muted">
-                What the pool holds right now, read live from mainnet. Public by
-                design — the pool&rsquo;s edges are visible, and only who owns
-                which share of it is not.
+      {/* ---------- live holdings ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-6">
+        <div className="grid gap-px overflow-hidden rounded-lg border border-edge bg-edge sm:grid-cols-2 lg:grid-cols-4">
+          {(holdings ?? Array.from({ length: 4 }, () => null)).map((h, i) => (
+            <div key={h?.symbol ?? i} className="bg-surface p-5">
+              <p className="label">{h?.symbol ?? "—"}</p>
+              <p className="num mt-2 text-2xl text-ash">
+                {h
+                  ? Number(fromUnits(h.balance, h.decimals)).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })
+                  : failed
+                    ? "—"
+                    : "···"}
               </p>
+              <p className="mt-1 font-mono text-[10px] text-faint">shielded in pool</p>
             </div>
-            <p className="num text-[11px] text-faint">
-              {block ? `block ${block.toLocaleString()}` : failed ? "rpc unreachable" : "reading…"}
-            </p>
-          </div>
-
-          <div className="grid gap-px overflow-hidden rounded-md border border-edge bg-edge sm:grid-cols-2 lg:grid-cols-4">
-            {(holdings ?? Array.from({ length: 4 }, () => null)).map((h, i) => (
-              <div key={h?.symbol ?? i} className="bg-surface p-5">
-                <p className="label">{h?.symbol ?? "—"}</p>
-                <p className="num mt-2 text-2xl text-ash">
-                  {h
-                    ? Number(fromUnits(h.balance, h.decimals)).toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })
-                    : failed
-                      ? "—"
-                      : "···"}
-                </p>
-                <p className="mt-1 font-mono text-[10px] text-faint">shielded in pool</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-4 font-mono text-[11px] text-faint">
-            pool{" "}
-            <a
-              href={contractUrl(CHAIN.pool)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-brass transition-colors hover:text-brass-lit"
-            >
-              {CHAIN.pool.slice(0, 10)}…{CHAIN.pool.slice(-6)} ↗
-            </a>
-          </p>
+          ))}
         </div>
+        <p className="mt-3 font-mono text-[11px] text-faint">
+          Read live from the pool at{" "}
+          <a
+            href={contractUrl(CHAIN.pool)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-brass transition-colors hover:text-brass-lit"
+          >
+            {CHAIN.pool.slice(0, 10)}…{CHAIN.pool.slice(-6)} ↗
+          </a>{" "}
+          — public by design, and auditable without a wallet or a viewing key.
+        </p>
+      </section>
+
+      {/* ---------- chart ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-20 pt-8">
+        <PoolChart symbol="STRK" />
       </section>
 
       {/* ---------- the honest claim ---------- */}
@@ -140,15 +133,15 @@ export default function Landing() {
             <p className="label mb-4 text-moss">Hidden</p>
             <ul className="space-y-3 text-[14px] leading-relaxed text-muted">
               <li>
-                <span className="text-ash">Who you are.</span> Nothing on-chain links
-                an earn action to your wallet
+                <span className="text-ash">Who you are.</span> Nothing on-chain
+                links an earn action to your wallet
               </li>
               <li>Your total shielded balance across all notes</li>
               <li>The link between your deposit and your withdrawal address</li>
               <li>Note amounts and ownership inside the pool</li>
               <li>
-                Note-to-note transfers — <span className="text-ash">both</span> amounts
-                and parties
+                Note-to-note transfers — <span className="text-ash">both</span>{" "}
+                amounts and parties
               </li>
             </ul>
           </div>
@@ -165,72 +158,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ---------- mechanism ---------- */}
+      {/* ---------- diagram ---------- */}
       <section className="mx-auto max-w-5xl px-6 pb-20">
-        <p className="label mb-3">How one private deposit works</p>
-        <h2 className="display mb-8 text-3xl text-ash">
-          Five steps, one atomic transaction.
-        </h2>
-
-        <ol className="grid gap-px overflow-hidden rounded-lg border border-edge bg-edge">
-          {[
-            {
-              n: "01",
-              t: "The pool pays the helper",
-              d: "A plain public transfer. Observers see the pool paid a contract — never who asked it to.",
-            },
-            {
-              n: "02",
-              t: "privacy_invoke",
-              d: "The pool calls our anonymizer through the protocol's INVOKE_SELECTOR.",
-            },
-            {
-              n: "03",
-              t: "Into the vault",
-              d: "The helper deposits into an allowlisted ERC-4626 market and measures what actually arrived.",
-              ours: true,
-            },
-            {
-              n: "04",
-              t: "Approve, never transfer",
-              d: "The helper approves the pool to pull the output. The pool does the pulling itself.",
-              ours: true,
-            },
-            {
-              n: "05",
-              t: "Credited as an encrypted note",
-              d: "The pool pulls the shares and credits them to a note only you can open.",
-            },
-          ].map((s) => (
-            <li key={s.n} className="flex gap-5 bg-surface p-6">
-              <span
-                className={`num shrink-0 text-[12px] ${s.ours ? "text-brass" : "text-faint"}`}
-              >
-                {s.n}
-              </span>
-              <div>
-                <p className="text-[15px] font-medium text-ash">
-                  {s.t}
-                  {s.ours && (
-                    <span className="ml-2 font-mono text-[10px] uppercase tracking-label text-brass">
-                      our contract
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{s.d}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        <p className="mt-4 text-[13px] text-faint">
-          If any step fails, all five revert. The helper never holds custody across
-          blocks, never learns who you are, and never touches an encrypted note.
-        </p>
+        <FlowDiagram />
       </section>
 
       {/* ---------- guarantees ---------- */}
-      <section className="mx-auto max-w-5xl px-6 pb-24">
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <p className="label mb-3">What the contract guarantees</p>
+        <h2 className="display mb-8 text-3xl text-ash">
+          Properties, not promises.
+        </h2>
         <div className="grid gap-4 md:grid-cols-3">
           {[
             {
@@ -252,11 +190,50 @@ export default function Landing() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ---------- faq ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <div className="mb-8 max-w-2xl">
+          <p className="label mb-3">Questions</p>
+          <h2 className="display text-3xl leading-tight text-ash">
+            Including the awkward ones.
+          </h2>
+        </div>
+        <Faq />
+      </section>
+
+      {/* ---------- cta ---------- */}
+      <section className="mx-auto max-w-5xl px-6 pb-24">
+        <div className="panel-lit flex flex-col items-start gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="display text-2xl text-ash">Earn without being watched.</h2>
+            <p className="mt-2 max-w-md text-[14px] leading-relaxed text-muted">
+              Mainnet only, and only wallets implementing the STRK20 Wallet API.
+              Support is probed when you connect rather than assumed.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <Link href="/vault" className="btn btn-primary">
+              Open position
+            </Link>
+            <a
+              href="https://github.com/maheepatel/Cellar"
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-ghost"
+            >
+              Read the contract
+            </a>
+          </div>
+        </div>
 
         {!HELPER.address && (
-          <p className="mt-6 rounded-md border border-edge bg-raised px-4 py-3 text-[13px] text-muted">
-            <span className="text-brass">Status:</span> contracts written and tested,
-            app live. The anonymizer is pending its mainnet deployment — see{" "}
+          <p className="mt-5 rounded-md border border-edge bg-raised px-4 py-3 text-[13px] text-muted">
+            <span className="text-brass">Status:</span> contract written and
+            covered by 16 tests, app live, disclosure working end to end. The
+            anonymizer&rsquo;s mainnet deployment is pending — tracked honestly
+            in{" "}
             <a
               href="https://github.com/maheepatel/Cellar/blob/main/docs/PHASES.md"
               target="_blank"
