@@ -8,6 +8,26 @@ Built for the [STRK20 Private Sprint](https://strk20.starknet.io/hackathon), aga
 
 ---
 
+## At a glance
+
+**The problem, and what changes.** Today every public chain publishes your
+balance, your positions and your whole history to anyone holding your address.
+
+![Cellar: the problem it solves](docs/img/01-problem.svg)
+
+**How one private deposit works.** Five steps inside a single atomic
+transaction. If any step fails, all five revert.
+
+![How a private deposit flows through the pool, our helper and a lending vault](docs/img/02-flow.svg)
+
+**What we actually built.** Two of the boxes are ours — the web app, and the
+Cairo anonymizer contract that sits between the privacy pool and a lending
+market. Everything else already existed.
+
+![System architecture: what we built versus what already existed](docs/img/03-architecture.svg)
+
+---
+
 ## The problem
 
 On-chain savings expose everything. Anyone can read your complete balance sheet and DeFi allocation. When positions execute from the same wallet across protocols, observers reconstruct your strategy and front-run it. Deposit and withdrawal addresses stay permanently linked, so the entire path of your capital is a public record.
