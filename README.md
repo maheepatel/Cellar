@@ -77,12 +77,16 @@ docs/ARCHITECTURE.md       the full cycle and design decisions
 docs/PRIVACY.md            what is hidden, what is not, and the limits
 docs/INTEGRATION.md        Wallet API route, action shapes, the calldata contract
 docs/PHASES.md             delivery plan and gates
+docs/RUNBOOK.md            step-by-step: wallet, faucet, deploy, verify the claims
 scripts/DEPLOY.md          starkli deployment, Sepolia then mainnet
 strk20.json                what the sprint panel reads
 ```
 
-**Start here:** [PRIVACY.md](docs/PRIVACY.md) for what Cellar actually claims,
-[INTEGRATION.md](docs/INTEGRATION.md) for how it talks to STRK20.
+**Never used Starknet?** Follow [RUNBOOK.md](docs/RUNBOOK.md) — wallet, free
+testnet tokens, deployment, and how to check every claim yourself.
+
+**Start here otherwise:** [PRIVACY.md](docs/PRIVACY.md) for what Cellar actually
+claims, [INTEGRATION.md](docs/INTEGRATION.md) for how it talks to STRK20.
 
 ## Quickstart
 
