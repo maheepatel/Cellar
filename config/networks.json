@@ -1,0 +1,89 @@
+{
+  "_note": "Both networks Cellar can run against. Sepolia is the default because it costs nothing to use and the faucet is open; mainnet is selected automatically when a wallet reports SN_MAIN.",
+  "_default": "SN_SEPOLIA",
+
+  "SN_SEPOLIA": {
+    "name": "Starknet Sepolia",
+    "short": "sepolia",
+    "testnet": true,
+    "chainId": "SN_SEPOLIA",
+    "chainIdHex": "0x534e5f5345504f4c4941",
+    "_rpcNote": "Lava, Blast, dRPC and Nethermind all failed for Sepolia on 2026-09-04; Cartridge answered. Verified by reading a block and the pool's class hash.",
+    "rpcUrl": "https://api.cartridge.gg/x/starknet/sepolia",
+    "poolAddress": "0x0254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91",
+    "_poolVerified": "class hash 0x7e2bbd7ccc1e68b2… read on-chain 2026-09-04",
+    "explorer": "https://sepolia.voyager.online",
+    "faucets": [
+      "https://starknet-faucet.vercel.app",
+      "https://faucet.starknet.io"
+    ],
+    "_tokensSource": "starknet-io/starknet-addresses, bridged_tokens/sepolia.json",
+    "tokens": {
+      "STRK": {
+        "address": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+        "decimals": 18
+      },
+      "ETH": {
+        "address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "decimals": 18
+      },
+      "USDC": {
+        "address": "0x053b40a647cedfca6ca84f542a0fe36736031905a9639a7f19a3c1e66bfd5080",
+        "decimals": 6
+      },
+      "WBTC": {
+        "address": "0x00452bd5c0512a61df7c7be8cfea5e4f893cb40e126bdc40aee6054db955129e",
+        "decimals": 8
+      }
+    },
+    "yieldHelper": {
+      "classHash": "",
+      "address": "",
+      "allowedVaults": []
+    },
+    "mocks": {
+      "asset": "",
+      "vault": ""
+    }
+  },
+
+  "SN_MAIN": {
+    "name": "Starknet Mainnet",
+    "short": "mainnet",
+    "testnet": false,
+    "chainId": "SN_MAIN",
+    "chainIdHex": "0x534e5f4d41494e",
+    "rpcUrl": "https://rpc.starknet.lava.build",
+    "poolAddress": "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a",
+    "explorer": "https://voyager.online",
+    "faucets": [],
+    "_tokensSource": "starknet-io/starknet-addresses, bridged_tokens/mainnet.json",
+    "tokens": {
+      "STRK": {
+        "address": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+        "decimals": 18
+      },
+      "ETH": {
+        "address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "decimals": 18
+      },
+      "USDC": {
+        "address": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+        "decimals": 6
+      },
+      "WBTC": {
+        "address": "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
+        "decimals": 8
+      }
+    },
+    "yieldHelper": {
+      "classHash": "",
+      "address": "",
+      "allowedVaults": []
+    },
+    "mocks": {
+      "asset": "",
+      "vault": ""
+    }
+  }
+}

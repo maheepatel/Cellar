@@ -6,7 +6,7 @@
 // viewing key, which would expose everything you have ever done.
 
 import { useCallback, useEffect, useState } from "react";
-import { TOKENS } from "@/lib/strk20";
+import { tokens } from "@/lib/strk20";
 import { toUnits } from "@/lib/actions";
 import { encode, issue, type Attestation } from "@/lib/attest";
 import { connect, discover, short, type Connection, type DiscoveredWallet } from "@/lib/wallet";
@@ -28,6 +28,7 @@ export default function ProvePage() {
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const TOKENS = tokens();
   const token = TOKENS[symbol];
 
   useEffect(() => {

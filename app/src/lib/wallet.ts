@@ -16,7 +16,7 @@
 // methods and report what is actually there.
 
 import { WalletAccountV6 } from "starknet";
-import { CHAIN, rpc } from "./strk20";
+import { NETWORKS, rpc, setNetwork, type Network } from "./strk20";
 
 /** The minimum surface we need from an injected wallet to discover + connect. */
 type InjectedWallet = {
@@ -80,6 +80,7 @@ export type Connection = {
   account: WalletAccountV6;
   address: string;
   chainId: string;
+  network: Network;
   strk20: boolean;
 };
 
@@ -89,9 +90,16 @@ export async function connect(wallet: DiscoveredWallet): Promise<Connection> {
   await w.request({ type: "wallet_requestAccounts" });
   const chainId = (await w.request({ type: "wallet_requestChainId" })) as string;
 
-  if (chainId !== CHAIN.idHex) {
+  // Follow the wallet rather than forcing a chain. Everything downstream — the
+  // pool address, token list, RPC and explorer — comes from this one lookup, so
+  // the app can never show one chain's addresses while signing on another.
+  const net = setNetwork(chainId);
+  if (!net) {
+    const supported = Object.values(NETWORKS)
+      .map((n) => n.name)
+      .join(" or ");
     throw new Error(
-      `Wrong network. STRK20 privacy is mainnet only — switch ${wallet.name} to Starknet Mainnet.`,
+      `${wallet.name} is on an unsupported chain (${chainId}). Switch it to ${supported}.`,
     );
   }
 
@@ -103,12 +111,13 @@ export async function connect(wallet: DiscoveredWallet): Promise<Connection> {
     "@starknet-io/get-starknet-wallet-standard-v6"
   );
   const standard = new StarknetInjectedWallet(w as never);
-  const account = await WalletAccountV6.connect(rpc(), standard);
+  const account = await WalletAccountV6.connect(rpc(net), standard);
 
   return {
     account,
     address: account.address,
     chainId,
+    network: net,
     strk20: supportsStrk20(account),
   };
 }

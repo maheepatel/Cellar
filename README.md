@@ -72,7 +72,7 @@ app/
   src/app/vault/           position dashboard
   src/app/prove/           issue a disclosure
   src/app/verify/          public verifier, no wallet needed
-config/mainnet.json        verified chain values, pinned
+config/networks.json       Sepolia + mainnet, verified addresses per chain
 docs/ARCHITECTURE.md       the full cycle and design decisions
 docs/PRIVACY.md            what is hidden, what is not, and the limits
 docs/INTEGRATION.md        Wallet API route, action shapes, the calldata contract
@@ -121,14 +121,23 @@ Tests use Cairo's native harness rather than Starknet Foundry, because **starkne
 
 Vesu may not be deployed on Starknet Sepolia. `MockVault` is a minimal ERC-4626 stand-in with a `simulate_yield_bps` hook, and the helper cannot tell it apart from the real thing — it only ever calls `deposit`, `withdraw`, `balance_of` and `approve`. Test against the mock on Sepolia, then pass the real Vesu vToken address to the constructor on mainnet.
 
-## Deployed contracts
+## Networks
 
-| Network | Contract | Address |
+Cellar defaults to **Starknet Sepolia** — it costs nothing, the faucet is open,
+and the STRK20 privacy pool is genuinely deployed there. Connecting a wallet on
+mainnet switches everything (pool, tokens, RPC, explorer) automatically; there
+is no way to read one chain's addresses while signing on another.
+
+| | Sepolia | Mainnet |
 |---|---|---|
-| Mainnet | YieldHelper | _pending — see `strk20.json`_ |
-| Sepolia | YieldHelper | _pending_ |
+| Privacy pool | `0x0254a6…cfe0d91` ✅ verified on-chain | `0x040337…ffe812a` |
+| Pool activity | ~227k STRK, ~100 ETH shielded | ~1.9M STRK, ~46 ETH |
+| RPC | api.cartridge.gg | rpc.starknet.lava.build |
+| YieldHelper | _pending — see [DEPLOY.md](scripts/DEPLOY.md)_ | _pending_ |
 
-STRK20 privacy pool (mainnet): `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a`
+Note on Sepolia RPCs: Lava, Blast, dRPC and Nethermind all failed when tested
+on 4 September 2026. Cartridge answered. Verify any replacement by reading a
+block **and** the pool class hash before trusting it.
 
 ## Scope
 

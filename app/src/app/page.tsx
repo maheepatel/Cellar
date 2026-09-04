@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CHAIN, HELPER, contractUrl, headBlock, poolHoldings } from "@/lib/strk20";
+import { contractUrl, headBlock, helper, network, poolHoldings } from "@/lib/strk20";
 import { fromUnits } from "@/lib/actions";
 import { PoolChart } from "@/components/PoolChart";
 import { FlowDiagram } from "@/components/FlowDiagram";
@@ -20,6 +20,8 @@ export default function Landing() {
   const [holdings, setHoldings] = useState<Holding[] | null>(null);
   const [block, setBlock] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
+
+  const NET = network();
 
   useEffect(() => {
     let alive = true;
@@ -40,9 +42,10 @@ export default function Landing() {
       {/* ---------- hero ---------- */}
       <section className="relative mx-auto max-w-5xl px-6 pb-20 pt-20 sm:pt-28">
         <div className="max-w-3xl animate-rise">
-          <p className="label mb-6 flex items-center gap-2">
+          <p className="label mb-6 flex flex-wrap items-center gap-2">
             <span className="dot animate-pulse-dot bg-brass" />
-            live on starknet mainnet
+            live on {NET.name}
+            {NET.testnet && <span className="chip chip-work">testnet</span>}
             {block && <span className="text-faint">· block {block.toLocaleString()}</span>}
           </p>
 
@@ -97,15 +100,29 @@ export default function Landing() {
         <p className="mt-3 font-mono text-[11px] text-faint">
           Read live from the pool at{" "}
           <a
-            href={contractUrl(CHAIN.pool)}
+            href={contractUrl(NET.poolAddress)}
             target="_blank"
             rel="noreferrer"
             className="text-brass transition-colors hover:text-brass-lit"
           >
-            {CHAIN.pool.slice(0, 10)}…{CHAIN.pool.slice(-6)} ↗
+            {NET.poolAddress.slice(0, 10)}…{NET.poolAddress.slice(-6)} ↗
           </a>{" "}
           — public by design, and auditable without a wallet or a viewing key.
         </p>
+        {NET.testnet && NET.faucets.length > 0 && (
+          <p className="mt-2 font-mono text-[11px] text-faint">
+            Testing costs nothing here. Get {Object.keys(NET.tokens)[0]} from the{" "}
+            <a
+              href={NET.faucets[0]}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brass hover:text-brass-lit"
+            >
+              faucet ↗
+            </a>
+            .
+          </p>
+        )}
       </section>
 
       {/* ---------- chart ---------- */}
@@ -228,7 +245,7 @@ export default function Landing() {
           </div>
         </div>
 
-        {!HELPER.address && (
+        {!helper().address && (
           <p className="mt-5 rounded-md border border-edge bg-raised px-4 py-3 text-[13px] text-muted">
             <span className="text-brass">Status:</span> contract written and
             covered by 16 tests, app live, disclosure working end to end. The

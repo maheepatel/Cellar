@@ -7,13 +7,13 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CHAIN, TOKENS, contractUrl } from "@/lib/strk20";
+import { contractUrl, network, tokens } from "@/lib/strk20";
 import { fromUnits } from "@/lib/actions";
 import { decode, verify, type Attestation, type VerifyResult } from "@/lib/attest";
 import { short } from "@/lib/wallet";
 
 function tokenFor(address: string) {
-  const hit = Object.entries(TOKENS).find(
+  const hit = Object.entries(tokens()).find(
     ([, t]) => t.address.toLowerCase() === address.toLowerCase(),
   );
   return hit ? { symbol: hit[0], ...hit[1] } : null;
@@ -175,7 +175,7 @@ function Verifier() {
               >
                 Voyager ↗
               </a>{" "}
-              · chain {CHAIN.id}
+              · chain {network().chainId}
             </p>
           </section>
         </>

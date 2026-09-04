@@ -7,7 +7,7 @@
 // and a stealth address to exit to.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CHAIN, DAPP_NAME, HELPER, TOKENS, contractUrl, shadowAccount, txUrl } from "@/lib/strk20";
+import { DAPP_NAME, contractUrl, helper, network, shadowAccount, tokens, txUrl } from "@/lib/strk20";
 import { earn, exitYield, fromUnits, previewYield, shieldedBalances, toUnits } from "@/lib/actions";
 import { connect, discover, short, type Connection, type DiscoveredWallet } from "@/lib/wallet";
 
@@ -29,6 +29,9 @@ export default function VaultPage() {
   const [hash, setHash] = useState<string | null>(null);
   const [shadow, setShadow] = useState<string | null>(null);
 
+  const TOKENS = tokens();
+  const NET = network();
+  const HELPER = helper();
   const token = TOKENS[symbol];
   const deployed = Boolean(HELPER.address && HELPER.allowedVaults.length);
   const vault = HELPER.allowedVaults[0] ?? "";
@@ -159,9 +162,11 @@ export default function VaultPage() {
         <div className="panel mb-6 border-l-2 border-l-brass p-5">
           <p className="text-[14px] font-medium text-ash">Anonymizer not deployed yet</p>
           <p className="mt-2 text-[13px] leading-relaxed text-muted">
-            The helper address and vault allowlist come from{" "}
-            <code className="text-brass">config/mainnet.json</code>, and both are
-            still empty. This screen lights up the moment it lands on mainnet.
+            No <code className="text-brass">YieldHelper</code> is registered for{" "}
+            {NET.name} in <code className="text-brass">config/networks.json</code>.
+            Deploy it and fill in the address — see{" "}
+            <code className="text-brass">scripts/DEPLOY.md</code> — and this screen
+            lights up.
           </p>
         </div>
       )}
@@ -305,12 +310,12 @@ export default function VaultPage() {
       <p className="mt-6 font-mono text-[11px] text-faint">
         pool{" "}
         <a
-          href={contractUrl(CHAIN.pool)}
+          href={contractUrl(NET.poolAddress)}
           target="_blank"
           rel="noreferrer"
           className="text-brass hover:text-brass-lit"
         >
-          {short(CHAIN.pool)}
+          {short(NET.poolAddress)}
         </a>
         {deployed && (
           <>

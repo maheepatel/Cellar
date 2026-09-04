@@ -6,47 +6,82 @@
 //
 // On this route the wallet holds the viewing key, discovers notes, generates
 // the ZK proof and submits the transaction. This app never touches a key, a
-// note, or a prover — which is why Cellar self-hosts no privacy
-// infrastructure, and why none of the SDK's client-side traps (BigInt viewing
-// keys, proving against block-10, empty proofFacts) apply to us.
+// note, or a prover — which is why Cellar self-hosts no privacy infrastructure,
+// and why none of the SDK's client-side traps (BigInt viewing keys, proving
+// against block-10, empty proofFacts) apply to us.
 //
-// All STRK20 types below come from starknet.js itself. Nothing here is
-// hand-rolled, so if the wallet spec moves, the compiler tells us.
+// Network: Sepolia by default, because it costs nothing and the faucet is
+// open. If a connected wallet reports mainnet, everything follows it there —
+// the pool, tokens, RPC and explorer all come from one config per chain, so
+// there is no way to read a mainnet address while talking to a testnet node.
 
 import { RpcProvider, WalletAccountV6 } from "starknet";
 import type { STRK20_ACTION, STRK20_CALL_AND_PROOF } from "starknet";
-import mainnet from "../../../config/mainnet.json";
+import networks from "../../../config/networks.json";
 
-/** Verified mainnet values from the sprint repo's docs/MAINNET-DAY-0.md. */
-export const CHAIN = {
-  id: mainnet.chainId,
-  idHex: mainnet.chainIdHex,
-  rpcUrl: mainnet.rpcUrl,
-  pool: mainnet.poolAddress,
-  explorer: mainnet.explorer,
-} as const;
+export type TokenInfo = { address: string; decimals: number };
+
+export type Network = {
+  name: string;
+  short: string;
+  testnet: boolean;
+  chainId: string;
+  chainIdHex: string;
+  rpcUrl: string;
+  poolAddress: string;
+  explorer: string;
+  faucets: string[];
+  tokens: Record<string, TokenInfo>;
+  yieldHelper: { classHash: string; address: string; allowedVaults: string[] };
+  mocks: { asset: string; vault: string };
+};
+
+const RAW = networks as unknown as Record<string, Network> & { _default: string };
+
+export const NETWORKS: Record<string, Network> = {
+  SN_SEPOLIA: RAW.SN_SEPOLIA,
+  SN_MAIN: RAW.SN_MAIN,
+};
+
+export const DEFAULT_NETWORK = RAW._default ?? "SN_SEPOLIA";
 
 /**
- * Mainnet token addresses, from starknet-io/starknet-addresses. Decimals
- * matter: USDC is 6, not 18, and getting that wrong is a 10^12 error.
+ * The chain the app is currently pointed at.
+ *
+ * Module-level rather than React state because non-component code (the action
+ * builders, the attestation verifier) needs it too. `connect()` sets it from
+ * whatever the wallet reports, so the UI can never be showing one chain's
+ * addresses while signing on another.
  */
-export const TOKENS = mainnet.tokens as Record<
-  string,
-  { address: string; decimals: number }
->;
+let active: Network = NETWORKS[DEFAULT_NETWORK];
+
+export function network(): Network {
+  return active;
+}
+
+export function setNetwork(chainIdHex: string): Network | null {
+  const found = Object.values(NETWORKS).find(
+    (n) => n.chainIdHex.toLowerCase() === chainIdHex.toLowerCase(),
+  );
+  if (found) active = found;
+  return found ?? null;
+}
+
+/** True while pointed at a testnet — the UI badges this prominently. */
+export function isTestnet(): boolean {
+  return active.testnet;
+}
+
+export function tokens(): Record<string, TokenInfo> {
+  return active.tokens;
+}
+
+export function helper() {
+  return active.yieldHelper;
+}
 
 /** Scopes shadow accounts to this app. Max 31 ASCII chars. */
-export const DAPP_NAME = mainnet.dappName;
-
-/**
- * The deployed anonymizer. Empty until Phase 2 puts it on mainnet — the UI
- * checks for that rather than failing at call time.
- */
-export const HELPER = mainnet.yieldHelper as {
-  classHash: string;
-  address: string;
-  allowedVaults: string[];
-};
+export const DAPP_NAME = "cellar";
 
 /** Mirrors LendingOperation in contracts/src/yield_helper.cairo. */
 export enum LendingOperation {
@@ -54,8 +89,8 @@ export enum LendingOperation {
   Withdraw = 1,
 }
 
-export function rpc(): RpcProvider {
-  return new RpcProvider({ nodeUrl: CHAIN.rpcUrl });
+export function rpc(net: Network = active): RpcProvider {
+  return new RpcProvider({ nodeUrl: net.rpcUrl });
 }
 
 /**
@@ -70,11 +105,11 @@ export function u256Parts(value: bigint): [string, string] {
 /**
  * Build the two actions that make up one private earn or withdraw.
  *
- * This is the whole product. A `transfer` carrying the literal amount "OPEN"
- * reserves an *open note* — a placeholder the pool will credit once our helper
- * reports how much actually arrived. The `invoke` then names YieldHelper and
- * hands it that note's id via the ${openNoteIds[0]} placeholder, which the
- * wallet substitutes at build time. Both land in one atomic transaction.
+ * A `transfer` carrying the literal amount "OPEN" reserves an *open note* — a
+ * placeholder the pool credits once our helper reports how much actually
+ * arrived. The `invoke` then names YieldHelper and hands it that note's id via
+ * the ${openNoteIds[0]} placeholder, which the wallet substitutes at build
+ * time. Both land in one atomic transaction.
  *
  * Calldata order must match `privacy_invoke`:
  *   (operation, in_token, out_token, assets: u256, note_id)
@@ -88,25 +123,20 @@ export function buildYieldActions(params: {
   helper: string;
   recipient: string;
 }): STRK20_ACTION[] {
-  const { operation, inToken, outToken, amount, helper, recipient } = params;
+  const { operation, inToken, outToken, amount, helper: h, recipient } = params;
   const [lo, hi] = u256Parts(amount);
 
   return [
     { type: "transfer", token: outToken, amount: "OPEN", recipient },
     {
       type: "invoke",
-      contract: helper,
+      contract: h,
       calldata: [`0x${operation.toString(16)}`, inToken, outToken, lo, hi, "${openNoteIds[0]}"],
     },
   ];
 }
 
-/**
- * Submit a private action set. The wallet proves and signs; we only wait.
- *
- * There is no explicit viewing-key registration step: wallets register on
- * first use, so a user's first private action also establishes their key.
- */
+/** Submit a private action set. The wallet proves and signs; we only wait. */
 export async function submit(
   account: WalletAccountV6,
   actions: STRK20_ACTION[],
@@ -116,14 +146,7 @@ export async function submit(
   return transaction_hash;
 }
 
-/**
- * Dry run: builds and proves without submitting, so a failure surfaces before
- * we ask anyone to sign. Also the honest way to measure proving latency, which
- * on this route belongs to the wallet but is still visible during a demo.
- *
- * In simulate mode the proof fields come back empty and the call is not
- * submittable — it is for fee estimation and UI previews only.
- */
+/** Dry run: builds and proves without submitting. */
 export async function prepare(
   account: WalletAccountV6,
   actions: STRK20_ACTION[],
@@ -132,21 +155,19 @@ export async function prepare(
 }
 
 /** Shielded balances for the given token addresses. */
-export async function shieldedBalances(account: WalletAccountV6, tokens: string[]) {
-  return account.strk20Balances(tokens as never);
+export async function shieldedBalances(account: WalletAccountV6, list: string[]) {
+  return account.strk20Balances(list as never);
 }
 
 /**
  * A shadow-account commitment — STRK20's stealth-account primitive.
  *
  * Deriving a per-dapp shadow account lets a withdrawal land somewhere with no
- * on-chain link to the depositing wallet. The sprint's integration-depth
- * criterion names stealth accounts explicitly, and this is the supported way
- * to reach them from the Wallet API.
+ * on-chain link to the depositing wallet.
  */
 export async function shadowAccount(
   account: WalletAccountV6,
-  dappName: string,
+  dappName: string = DAPP_NAME,
   nonce = "0x0",
 ): Promise<string> {
   return account.strk20ShadowAccountCommitment(dappName as never, nonce as never);
@@ -155,49 +176,45 @@ export async function shadowAccount(
 /**
  * How much of each token the privacy pool currently holds.
  *
- * This is a plain `balance_of` on each ERC-20 against the pool address — fully
- * public information, and deliberately so. The pool's edges are visible by
- * design; what is hidden is who owns which share of it. Reading it needs no
- * wallet and no viewing key, which is exactly the point: the anonymity set is
- * something anyone can audit.
+ * A plain `balance_of` against the pool — fully public information, and
+ * deliberately so. The pool's edges are visible by design; what is hidden is
+ * who owns which share. Needs no wallet and no viewing key, which is the
+ * point: the anonymity set is something anyone can audit.
  */
-export async function poolHoldings(): Promise<
-  { symbol: string; address: string; decimals: number; balance: bigint }[]
-> {
-  const p = rpc();
-  const entries = Object.entries(TOKENS);
-
-  const results = await Promise.all(
-    entries.map(async ([symbol, t]) => {
+export async function poolHoldings(
+  net: Network = active,
+): Promise<{ symbol: string; address: string; decimals: number; balance: bigint }[]> {
+  const p = rpc(net);
+  return Promise.all(
+    Object.entries(net.tokens).map(async ([symbol, t]) => {
       try {
         const res = await p.callContract({
           contractAddress: t.address,
           entrypoint: "balance_of",
-          calldata: [CHAIN.pool],
+          calldata: [net.poolAddress],
         });
-        // u256, low limb first.
-        const balance = BigInt(res[0]) + (BigInt(res[1] ?? "0x0") << 128n);
-        return { symbol, address: t.address, decimals: t.decimals, balance };
+        return {
+          symbol,
+          address: t.address,
+          decimals: t.decimals,
+          balance: BigInt(res[0]) + (BigInt(res[1] ?? "0x0") << 128n),
+        };
       } catch {
-        // A token the pool has never held may not respond; treat as zero
-        // rather than failing the whole panel.
         return { symbol, address: t.address, decimals: t.decimals, balance: 0n };
       }
     }),
   );
-
-  return results;
 }
 
 /** Current head block — cheap liveness signal for the UI. */
-export async function headBlock(): Promise<number> {
-  return rpc().getBlockNumber();
+export async function headBlock(net: Network = active): Promise<number> {
+  return rpc(net).getBlockNumber();
 }
 
-export function txUrl(hash: string): string {
-  return `${CHAIN.explorer}/tx/${hash}`;
+export function txUrl(hash: string, net: Network = active): string {
+  return `${net.explorer}/tx/${hash}`;
 }
 
-export function contractUrl(addr: string): string {
-  return `${CHAIN.explorer}/contract/${addr}`;
+export function contractUrl(addr: string, net: Network = active): string {
+  return `${net.explorer}/contract/${addr}`;
 }

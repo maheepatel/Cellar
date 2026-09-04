@@ -15,7 +15,7 @@
 // their key. That is why `shield` is the natural opener.
 
 import type { STRK20_ACTION, WalletAccountV6 } from "starknet";
-import { HELPER, LendingOperation, buildYieldActions, rpc, u256Parts } from "./strk20";
+import { LendingOperation, buildYieldActions, helper, rpc, u256Parts } from "./strk20";
 
 export { shieldedBalances } from "./strk20";
 
@@ -63,7 +63,8 @@ export async function previewYield(params: {
   vault: string;
   amount: bigint;
 }): Promise<bigint> {
-  if (!HELPER.address) throw new Error("YieldHelper is not deployed yet");
+  const h = helper();
+  if (!h.address) throw new Error("YieldHelper is not deployed on this network yet");
 
   const isDeposit = params.operation === "deposit";
   // Deposit: underlying in, shares out. Withdraw: shares in, underlying out.
@@ -72,7 +73,7 @@ export async function previewYield(params: {
   const [lo, hi] = u256Parts(params.amount);
 
   const res = await rpc().callContract({
-    contractAddress: HELPER.address,
+    contractAddress: h.address,
     entrypoint: "preview",
     calldata: [
       isDeposit ? "0x0" : "0x1",

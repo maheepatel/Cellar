@@ -9,7 +9,7 @@
 // Deliberately plain. The product dashboard is Phase 3; this is the gate.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CHAIN, TOKENS, txUrl } from "@/lib/strk20";
+import { network, tokens, txUrl } from "@/lib/strk20";
 import { fromUnits, privateTransfer, shield, toUnits, unshield } from "@/lib/actions";
 import { connect, discover, short, type Connection, type DiscoveredWallet } from "@/lib/wallet";
 
@@ -63,6 +63,8 @@ export default function Page() {
     unshield: { status: "idle" },
   });
 
+  const TOKENS = tokens();
+  const CHAIN = network();
   const token = TOKENS[symbol];
 
   useEffect(() => {
@@ -168,7 +170,7 @@ export default function Page() {
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted">network</dt>
-              <dd>{conn.chainId === CHAIN.idHex ? "SN_MAIN" : conn.chainId}</dd>
+              <dd>{conn.network.name}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted">STRK20 Wallet API</dt>
@@ -319,11 +321,11 @@ export default function Page() {
           Pool{" "}
           <a
             className="text-brass underline"
-            href={`${CHAIN.explorer}/contract/${CHAIN.pool}`}
+            href={`${CHAIN.explorer}/contract/${CHAIN.poolAddress}`}
             target="_blank"
             rel="noreferrer"
           >
-            {short(CHAIN.pool)}
+            {short(CHAIN.poolAddress)}
           </a>{" "}
           · RPC {CHAIN.rpcUrl}
         </p>

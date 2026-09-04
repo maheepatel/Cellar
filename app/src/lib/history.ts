@@ -10,7 +10,7 @@
 // owns which share of it is not. That the set is auditable by anyone, with no
 // wallet and no viewing key, is the point rather than a leak.
 
-import { CHAIN, TOKENS, rpc } from "./strk20";
+import { network, rpc, tokens } from "./strk20";
 
 export type Point = { block: number; value: bigint };
 export type Series = {
@@ -43,7 +43,7 @@ async function pooled<T, R>(
 
 async function balanceAt(token: string, block: number): Promise<bigint> {
   const res = await rpc().callContract(
-    { contractAddress: token, entrypoint: "balance_of", calldata: [CHAIN.pool] },
+    { contractAddress: token, entrypoint: "balance_of", calldata: [network().poolAddress] },
     block,
   );
   return BigInt(res[0]) + (BigInt(res[1] ?? "0x0") << 128n);
@@ -68,7 +68,7 @@ export async function poolSeries(
   symbol = "STRK",
   opts: { points?: number; span?: number } = {},
 ): Promise<Series> {
-  const token = TOKENS[symbol];
+  const token = tokens()[symbol];
   if (!token) throw new Error(`unknown token ${symbol}`);
 
   const points = opts.points ?? 16;

@@ -27,7 +27,7 @@
 // replay-resistant.
 
 import { typedData as td, type TypedData, type WalletAccountV6 } from "starknet";
-import { CHAIN, rpc } from "./strk20";
+import { network, rpc } from "./strk20";
 
 export type Claim = {
   /** The account making the statement. */
@@ -79,7 +79,7 @@ export function buildTypedData(claim: Claim): TypedData {
     domain: {
       name: "Cellar",
       version: "1",
-      chainId: CHAIN.id,
+      chainId: network().chainId,
       revision: "1",
     },
     message: {
